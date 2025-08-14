@@ -1,7 +1,28 @@
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import WebshareProxyConfig
 from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
 import re
+
+
+def get_youtube_api_instance():
+    """Get YouTube API instance with optional proxy configuration"""
+    # Check if proxy credentials are available in environment or session state
+    proxy_username = st.session_state.get('proxy_username') or None
+    proxy_password = st.session_state.get('proxy_password') or None
+    
+    if proxy_username and proxy_password:
+        try:
+            proxy_config = WebshareProxyConfig(
+                proxy_username=proxy_username,
+                proxy_password=proxy_password,
+            )
+            return YouTubeTranscriptApi(proxy_config=proxy_config)
+        except Exception as e:
+            st.warning(f"⚠️ Proxy configuration failed: {str(e)}. Using direct connection.")
+            return YouTubeTranscriptApi()
+    
+    return YouTubeTranscriptApi()
 
 
 def extract_transcript_details(youtube_video_url):
@@ -20,6 +41,9 @@ def extract_transcript_details(youtube_video_url):
         if not video_id:
             raise ValueError("Could not extract video ID from URL")
 
+        # Get API instance (with or without proxy)
+        api_instance = get_youtube_api_instance()
+
         # Try multiple approaches to get transcripts
         transcript_data = None
         available_transcripts = []
@@ -29,9 +53,9 @@ def extract_transcript_details(youtube_video_url):
             try:
                 if lang_code is None:
                     # Try without specifying language
-                    transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
+                    transcript_data = api_instance.get_transcript(video_id)
                 else:
-                    transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang_code])
+                    transcript_data = api_instance.get_transcript(video_id, languages=[lang_code])
                 
                 if transcript_data:
                     return {
@@ -44,7 +68,7 @@ def extract_transcript_details(youtube_video_url):
 
         # Get list of available transcripts first
         try:
-            transcript_list_info = YouTubeTranscriptApi.list_transcripts(video_id)
+            transcript_list_info = api_instance.list_transcripts(video_id)
 
             for transcript in transcript_list_info:
                 transcript_info = {
@@ -77,11 +101,14 @@ def extract_transcript_details(youtube_video_url):
 def get_transcript_by_language(video_id, language_code):
     """Get transcript for specific language"""
     try:
+        # Get API instance (with or without proxy)
+        api_instance = get_youtube_api_instance()
+        
         # Handle special case for auto-detected transcripts
         if language_code == 'auto':
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+            transcript_list = api_instance.get_transcript(video_id)
         else:
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=[language_code])
+            transcript_list = api_instance.get_transcript(video_id, languages=[language_code])
 
         formatted_transcript = ""
         full_text = ""
@@ -161,6 +188,43 @@ def main():
         - News videos
         - Popular YouTube channels
         """)
+        
+        # Proxy configuration section
+        st.divider()
+        st.header("🌐 Proxy Settings (Optional)")
+        st.markdown("Use proxy if you're experiencing regional restrictions:")
+        
+        with st.expander("Configure Proxy"):
+            proxy_username = st.text_input(
+                "Proxy Username:",
+                value=st.session_state.get('proxy_username', ''),
+                help="Enter your Webshare or other proxy username"
+            )
+            proxy_password = st.text_input(
+                "Proxy Password:",
+                type="password",
+                value=st.session_state.get('proxy_password', ''),
+                help="Enter your proxy password"
+            )
+            
+            if st.button("💾 Save Proxy Settings"):
+                st.session_state['proxy_username'] = proxy_username
+                st.session_state['proxy_password'] = proxy_password
+                if proxy_username and proxy_password:
+                    st.success("✅ Proxy settings saved!")
+                else:
+                    st.info("ℹ️ Proxy settings cleared - using direct connection")
+            
+            if st.button("🗑️ Clear Proxy Settings"):
+                st.session_state['proxy_username'] = ''
+                st.session_state['proxy_password'] = ''
+                st.success("✅ Proxy settings cleared!")
+            
+            # Show current proxy status
+            if st.session_state.get('proxy_username'):
+                st.info(f"🌐 Using proxy: {st.session_state.get('proxy_username')}")
+            else:
+                st.info("🔗 Using direct connection")
 
     col1, col2 = st.columns([2, 1])
 
