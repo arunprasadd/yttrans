@@ -1,4 +1,3 @@
-
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
@@ -45,45 +44,49 @@ def extract_video_id(youtube_video_url):
     
     return video_id
 
-def get_english_transcript(video_id):
-    """Get English transcript directly - tries multiple English variants"""
+def get_any_available_transcript(video_id):
+    """Get any available transcript - tries English first, then any other language"""
     try:
-        # Try different English language codes in order of preference
+        # First, try to get list of available transcripts
+        transcript_list = ytt_api.list(video_id)
+        
+        if not transcript_list:
+            return {
+                'success': False,
+                'error': "No transcripts available for this video"
+            }
+        
+        # Priority order: English variants first, then any other language
         english_codes = ['en', 'en-US', 'en-GB', 'en-CA', 'en-AU']
         
+        # Try English first
         for lang_code in english_codes:
-            try:
-                transcript_data = ytt_api.get_transcript(video_id, languages=[lang_code])
-                
-                # Process the transcript
-                formatted_transcript = ""
-                full_text = ""
-                
-                for entry in transcript_data:
-                    timestamp = format_timestamp(entry['start'])
-                    text = entry['text']
-                    formatted_transcript += f"[{timestamp}] {text}\n"
-                    full_text += f" {text}"
-                
-                duration = transcript_data[-1]['start'] + transcript_data[-1]['duration'] if transcript_data else 0
-                
-                return {
-                    'success': True,
-                    'language_code': lang_code,
-                    'formatted_transcript': formatted_transcript,
-                    'full_text': full_text.strip(),
-                    'duration': duration,
-                    'word_count': len(full_text.strip().split()),
-                    'line_count': len(formatted_transcript.split('\n')) - 1
-                }
-                
-            except Exception:
-                continue  # Try next language code
+            for transcript in transcript_list:
+                if transcript.language_code == lang_code:
+                    try:
+                        transcript_data = transcript.fetch()
+                        return process_transcript_data(transcript_data, transcript.language, lang_code, is_preferred=True)
+                    except Exception:
+                        continue
         
-        # If no English transcript found
+        # If no English found, try any available transcript
+        for transcript in transcript_list:
+            try:
+                transcript_data = transcript.fetch()
+                return process_transcript_data(
+                    transcript_data, 
+                    transcript.language, 
+                    transcript.language_code,
+                    is_preferred=False,
+                    is_generated=transcript.is_generated
+                )
+            except Exception:
+                continue
+        
+        # If still no transcript found
         return {
             'success': False,
-            'error': "No English transcript found. Tried: " + ", ".join(english_codes)
+            'error': "Could not fetch any available transcript"
         }
         
     except TranscriptsDisabled:
@@ -95,6 +98,32 @@ def get_english_transcript(video_id):
     except Exception as e:
         return {'success': False, 'error': f"Error accessing video: {str(e)}"}
 
+def process_transcript_data(transcript_data, language_name, language_code, is_preferred=False, is_generated=False):
+    """Process transcript data into formatted output"""
+    formatted_transcript = ""
+    full_text = ""
+    
+    for entry in transcript_data:
+        timestamp = format_timestamp(entry['start'])
+        text = entry['text']
+        formatted_transcript += f"[{timestamp}] {text}\n"
+        full_text += f" {text}"
+    
+    duration = transcript_data[-1]['start'] + transcript_data[-1]['duration'] if transcript_data else 0
+    
+    return {
+        'success': True,
+        'language_name': language_name,
+        'language_code': language_code,
+        'is_english': language_code.startswith('en'),
+        'is_generated': is_generated,
+        'is_preferred': is_preferred,
+        'formatted_transcript': formatted_transcript,
+        'full_text': full_text.strip(),
+        'duration': duration,
+        'word_count': len(full_text.strip().split()),
+        'line_count': len(formatted_transcript.split('\n')) - 1
+    }
 def format_timestamp(seconds):
     """Convert seconds to MM:SS or HH:MM:SS format"""
     hours = int(seconds // 3600)
@@ -113,8 +142,8 @@ def main():
         layout="wide"
     )
     
-    st.title("📺 YouTube English Transcript Extractor")
-    st.markdown("**Directly extract English transcripts from YouTube videos**")
+    st.title("📺 YouTube Transcript Extractor")
+    st.markdown("**Extract transcripts from YouTube videos - tries English first, then any available language**")
     
     with st.sidebar:
         st.header("📋 Instructions")
@@ -130,10 +159,11 @@ def main():
         - Without proxy: YouTube will block requests
         - Replace `<proxy-username>` and `<proxy-password>`
         
-        **English Language Support:**
-        - Tries: en, en-US, en-GB, en-CA, en-AU
-        - Gets the first available English variant
-        - Works with both manual and auto-generated captions
+        **Language Priority:**
+        - **1st Priority:** English (en, en-US, en-GB, en-CA, en-AU)
+        - **2nd Priority:** Any other available language
+        - **Automatic fallback** if English not available
+        - Shows language info in results
         
         **Supported URL formats:**
         - `youtube.com/watch?v=VIDEO_ID`
@@ -167,7 +197,7 @@ def main():
         )
     
     with col2:
-        extract_button = st.button("🔍 Extract English Transcript", type="primary", use_container_width=True)
+        extract_button = st.button("🔍 Extract Transcript", type="primary", use_container_width=True)
     
     # Show video thumbnail if valid URL
     if youtube_link:
@@ -197,19 +227,27 @@ def main():
             # Extract video ID
             video_id = extract_video_id(youtube_link)
             
-            with st.spinner("🔍 Extracting English transcript..."):
-                # Get English transcript directly
-                result = get_english_transcript(video_id)
+            with st.spinner("🔍 Extracting transcript (trying English first, then any available language)..."):
+                # Get any available transcript
+                result = get_any_available_transcript(video_id)
                 
                 if result['success']:
-                    st.success(f"✅ English transcript extracted successfully! (Language: {result['language_code']})")
+                    # Show success message with language info
+                    language_info = f"{result['language_name']} ({result['language_code']})"
+                    transcript_type = "Auto-generated" if result.get('is_generated') else "Manual"
+                    
+                    if result['is_english']:
+                        st.success(f"✅ English transcript found! Language: {language_info} | Type: {transcript_type}")
+                    else:
+                        st.success(f"✅ Transcript extracted! Language: {language_info} | Type: {transcript_type}")
+                        st.info(f"ℹ️ English not available, showing {result['language_name']} transcript instead")
                     
                     # Show statistics
                     col1, col2, col3, col4 = st.columns(4)
                     col1.metric("📝 Word Count", f"{result['word_count']:,}")
                     col2.metric("⏱️ Duration", format_timestamp(result['duration']))
                     col3.metric("📄 Lines", result['line_count'])
-                    col4.metric("🌍 Language", result['language_code'].upper())
+                    col4.metric("🌍 Language", f"{result['language_code'].upper()}")
                     
                     st.divider()
                     
@@ -218,7 +256,7 @@ def main():
                     
                     with tab1:
                         st.text_area(
-                            "Formatted Transcript with Timestamps:",
+                            f"Formatted Transcript ({result['language_name']}) with Timestamps:",
                             result['formatted_transcript'],
                             height=400,
                             help="Copy this text or use the download button below"
@@ -226,31 +264,38 @@ def main():
                     
                     with tab2:
                         st.text_area(
-                            "Plain Text (No Timestamps):",
+                            f"Plain Text ({result['language_name']}) - No Timestamps:",
                             result['full_text'],
                             height=400,
                             help="Clean text without timestamps - good for analysis"
                         )
                     
                     with tab3:
+                        # Create safe filename
+                        safe_lang = result['language_code'].replace('-', '_')
+                        
                         col1, col2 = st.columns(2)
                         col1.download_button(
                             label="📥 Download with Timestamps",
                             data=result['formatted_transcript'],
-                            file_name=f"transcript_{video_id}_english_formatted.txt",
+                            file_name=f"transcript_{video_id}_{safe_lang}_formatted.txt",
                             mime="text/plain",
                             help="Download transcript with timestamps"
                         )
                         col2.download_button(
                             label="📥 Download Plain Text",
                             data=result['full_text'],
-                            file_name=f"transcript_{video_id}_english_plain.txt",
+                            file_name=f"transcript_{video_id}_{safe_lang}_plain.txt",
                             mime="text/plain",
                             help="Download clean text without timestamps"
                         )
                         
                         # Additional info
-                        st.info(f"💡 **Tip:** Text extracted from {result['language_code']} transcript variant")
+                        if result['is_english']:
+                            st.success(f"💡 **Perfect!** Found English transcript ({result['language_code']})")
+                        else:
+                            st.info(f"💡 **Note:** This is a {result['language_name']} transcript. English was not available.")
+                            st.markdown("**You can use translation tools like Google Translate to convert this to English.**")
                 
                 else:
                     st.error(f"❌ {result['error']}")
@@ -258,10 +303,11 @@ def main():
                     # Show helpful suggestions
                     st.markdown("""
                     **Possible solutions:**
-                    - Check if the video has English captions enabled
+                    - Check if the video has any captions/subtitles enabled
                     - Try a different YouTube video
                     - Make sure the video is publicly accessible
                     - Wait a few minutes and try again if rate limited
+                    - Verify your proxy credentials are correct
                     """)
         
         except Exception as e:
@@ -271,9 +317,10 @@ def main():
     st.divider()
     st.markdown("""
     <div style='text-align: center; color: #666; font-size: 0.8em;'>
-        <p>📺 YouTube English Transcript Extractor | Built with Streamlit</p>
-        <p>⚠️ Only works with videos that have English captions/subtitles enabled</p>
-        <p>🔄 Automatically tries multiple English variants: en, en-US, en-GB, en-CA, en-AU</p>
+        <p>📺 YouTube Transcript Extractor | Built with Streamlit</p>
+        <p>⚠️ Works with any video that has captions/subtitles enabled</p>
+        <p>🔄 Priority: English first, then any available language</p>
+        <p>🌍 Supports all languages available on YouTube</p>
     </div>
     """, unsafe_allow_html=True)
 
