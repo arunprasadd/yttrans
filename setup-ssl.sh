@@ -35,15 +35,29 @@ print_error() {
 # Check if running as root
 check_root() {
     if [[ $EUID -eq 0 ]]; then
-        print_warning "Running as root. This is not recommended for security reasons."
-        print_warning "Consider creating a regular user with sudo privileges."
-        read -p "Do you want to continue as root anyway? (y/N): " -n 1 -r
+        print_warning "Running as root detected."
+        print_warning "This is not recommended for security reasons in production."
+        print_warning "Consider creating a regular user with sudo privileges for production use."
+        echo ""
+        read -p "Do you want to continue as root? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_error "Setup cancelled. Please create a regular user or run with sudo."
+            print_error "Setup cancelled."
+            echo "To create a regular user:"
+            echo "  adduser ytuser"
+            echo "  usermod -aG sudo,docker ytuser"
+            echo "  su - ytuser"
             exit 1
         fi
-        print_warning "Continuing as root..."
+        print_status "Continuing as root..."
+        
+        # Set proper permissions for files created as root
+        export DOCKER_USER="root"
+        export DOCKER_GROUP="root"
+    else
+        export DOCKER_USER="$USER"
+        export DOCKER_GROUP="$(id -gn)"
+        print_status "Running as user: $USER"
     fi
 }
 
@@ -74,17 +88,27 @@ check_domain() {
 install_packages() {
     echo "📦 Installing required packages..."
     
-    # Update package list
-    sudo apt update
+    # Update package list (use sudo only if not root)
+    if [[ $EUID -eq 0 ]]; then
+        apt update
+    else
+        sudo apt update
+    fi
     
     # Install Docker if not present
     if ! command -v docker &> /dev/null; then
         print_status "Installing Docker..."
-        sudo apt install -y docker.io docker-compose-plugin
-        sudo systemctl start docker
-        sudo systemctl enable docker
-        sudo usermod -aG docker $USER
-        print_warning "You may need to log out and back in for Docker group changes to take effect"
+        if [[ $EUID -eq 0 ]]; then
+            apt install -y docker.io docker-compose-plugin
+            systemctl start docker
+            systemctl enable docker
+        else
+            sudo apt install -y docker.io docker-compose-plugin
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            sudo usermod -aG docker $USER
+            print_warning "You may need to log out and back in for Docker group changes to take effect"
+        fi
     else
         print_status "Docker is already installed"
     fi
@@ -101,14 +125,27 @@ install_packages() {
     fi
     
     # Install other utilities
-    sudo apt install -y curl dnsutils
+    if [[ $EUID -eq 0 ]]; then
+        apt install -y curl dnsutils
+    else
+        sudo apt install -y curl dnsutils
+    fi
 }
 
 # Create necessary directories
 create_directories() {
     echo "📁 Creating necessary directories..."
     mkdir -p certbot/conf certbot/www nginx/html
-    sudo chown -R $USER:$USER certbot nginx
+    
+    # Set appropriate ownership based on user
+    if [[ $EUID -eq 0 ]]; then
+        # Running as root - set root ownership but make accessible
+        chown -R root:root certbot nginx
+        chmod -R 755 certbot nginx
+    else
+        # Running as regular user
+        sudo chown -R $USER:$USER certbot nginx
+    fi
 }
 
 # Stop any existing containers and system nginx
@@ -119,8 +156,13 @@ stop_services() {
     $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml down 2>/dev/null || true
     
     # Stop system nginx if running
-    sudo systemctl stop nginx 2>/dev/null || true
-    sudo systemctl disable nginx 2>/dev/null || true
+    if [[ $EUID -eq 0 ]]; then
+        systemctl stop nginx 2>/dev/null || true
+        systemctl disable nginx 2>/dev/null || true
+    else
+        sudo systemctl stop nginx 2>/dev/null || true
+        sudo systemctl disable nginx 2>/dev/null || true
+    fi
 }
 
 # Create initial nginx config for certificate generation
