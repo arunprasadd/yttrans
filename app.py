@@ -20,10 +20,31 @@ def extract_transcript_details(youtube_video_url):
         if not video_id:
             raise ValueError("Could not extract video ID from URL")
 
+        # Try multiple approaches to get transcripts
+        transcript_data = None
+        available_transcripts = []
+        
+        # Method 1: Try direct transcript access first (sometimes works when list_transcripts fails)
+        for lang_code in ['en', 'en-US', 'en-GB', 'auto', None]:
+            try:
+                if lang_code is None:
+                    # Try without specifying language
+                    transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
+                else:
+                    transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang_code])
+                
+                if transcript_data:
+                    return {
+                        'video_id': video_id,
+                        'available_transcripts': [{'language': f'Auto-detected ({lang_code or "default"})', 'language_code': lang_code or 'auto', 'is_generated': True, 'is_translatable': False}],
+                        'transcript_data': transcript_data
+                    }
+            except:
+                continue
+
         # Get list of available transcripts first
         try:
             transcript_list_info = YouTubeTranscriptApi.list_transcripts(video_id)
-            available_transcripts = []
 
             for transcript in transcript_list_info:
                 transcript_info = {
@@ -41,41 +62,11 @@ def extract_transcript_details(youtube_video_url):
             }
 
         except TranscriptsDisabled:
-            # Try alternative approach - sometimes the API reports disabled when they're actually available
-            try:
-                # Try to get any available transcript directly
-                transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
-                if transcript_data:
-                    return {
-                        'video_id': video_id,
-                        'available_transcripts': [{'language': 'Auto-detected', 'language_code': 'auto', 'is_generated': True, 'is_translatable': False}],
-                        'transcript_data': transcript_data
-                    }
-            except:
-                pass
-            
-            raise Exception("❌ Transcripts appear to be disabled for this video, even though captions may be visible on YouTube. This can happen due to:\n\n• Regional restrictions on transcript access\n• API limitations for certain video types\n• Temporary YouTube API issues\n\nTry:\n• A different video with confirmed captions\n• Refreshing and trying again later\n• Using a VPN if you're in a restricted region")
+            raise Exception("❌ Transcripts appear to be disabled for this video, even though captions may be visible on YouTube. This can happen due to:\n\n• Regional restrictions on transcript access\n• API limitations for certain video types\n• Temporary YouTube API issues\n• Video creator has disabled API access to transcripts\n\nTry:\n• A different video with confirmed captions\n• Refreshing and trying again later\n• Using a VPN if you're in a restricted region\n• Testing with TED Talks or educational videos which typically work")
         except VideoUnavailable:
             raise Exception("❌ Video is unavailable. This could be because the video is private, deleted, age-restricted, or region-blocked. Please check the video URL and try again.")
         except NoTranscriptFound:
-            # Try alternative languages
-            try:
-                # Try common language codes
-                for lang_code in ['en', 'en-US', 'en-GB', 'auto']:
-                    try:
-                        transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang_code])
-                        if transcript_data:
-                            return {
-                                'video_id': video_id,
-                                'available_transcripts': [{'language': f'Auto-detected ({lang_code})', 'language_code': lang_code, 'is_generated': True, 'is_translatable': False}],
-                                'transcript_data': transcript_data
-                            }
-                    except:
-                        continue
-            except:
-                pass
-                
-            raise Exception("❌ No transcripts found for this video, even though captions may be visible on YouTube. This can happen when:\n\n• Captions are embedded/burned into the video\n• Captions are only available in languages not supported by the API\n• The video uses a caption format not accessible via API\n\nTry a different video with standard YouTube captions.")
+            raise Exception("❌ No transcripts found for this video, even though captions may be visible on YouTube. This can happen when:\n\n• Captions are embedded/burned into the video\n• Captions are only available in languages not supported by the API\n• The video uses a caption format not accessible via API\n• Regional restrictions prevent API access\n\nTry a different video with standard YouTube captions.")
         except Exception as e:
             raise Exception(f"❌ Error accessing video: {str(e)}. Please check if the video URL is correct and the video is publicly accessible.")
 
