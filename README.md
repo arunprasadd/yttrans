@@ -1,21 +1,21 @@
-# YouTube Transcript Summarizer
+# YouTube Transcript Extractor
 
-A Streamlit web application that extracts transcripts from YouTube videos and generates AI-powered summaries using Google's Gemini Pro model.
+A Streamlit web application that extracts transcripts from YouTube videos with available captions/subtitles.
 
 ## Features
 
 - 📺 Extract transcripts from any YouTube video
-- 🤖 AI-powered summarization using Google Gemini Pro
-- 📝 Generate concise bullet-point summaries (under 250 words)
+- ⏱️ Display transcripts with timestamps
+- 📄 View plain text version without timestamps
 - 🖼️ Video thumbnail preview
-- 📄 View full transcript alongside summary
+- 💾 Download transcripts in multiple formats
+- 📊 Display transcript statistics (word count, duration)
 
 ## Setup
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- Google AI API key
 
 ### Installation
 
@@ -30,17 +30,7 @@ cd youtube-transcriber
 pip install -r requirements.txt
 ```
 
-3. Set up environment variables:
-```bash
-cp .env.example .env
-```
-
-4. Get your Google AI API key:
-   - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-   - Create a new API key
-   - Copy the key and paste it in the `.env` file
-
-5. Run the application:
+3. Run the application:
 ```bash
 streamlit run app.py
 ```
@@ -49,25 +39,26 @@ streamlit run app.py
 
 1. Open the application in your browser (usually `http://localhost:8501`)
 2. Paste a YouTube video URL in the input field
-3. Click "Get Detailed Notes" to generate the summary
-4. View the AI-generated summary and optionally expand to see the full transcript
+3. Click "Extract Transcript" to get the transcript
+4. View the transcript with timestamps or as plain text
+5. Download the transcript in your preferred format
 
 ## How it Works
 
-1. **Transcript Extraction**: Uses `youtube-transcript-api` to extract captions/subtitles from YouTube videos
-2. **AI Summarization**: Sends the transcript to Google's Gemini Pro model with a specialized prompt
-3. **Summary Generation**: Returns a concise, bullet-pointed summary of the video content
+1. **URL Processing**: Supports multiple YouTube URL formats
+2. **Transcript Extraction**: Uses `youtube-transcript-api` to extract captions/subtitles
+3. **Formatting**: Displays transcripts with timestamps and provides plain text version
+4. **Download**: Allows downloading in multiple formats
 
 ## Requirements
 
 - The YouTube video must have captions/subtitles available (auto-generated or manual)
-- Valid Google AI API key with Gemini Pro access
 
 ## Limitations
 
 - Only works with videos that have available transcripts
-- Summary length is limited to approximately 250 words
-- Requires internet connection for both transcript extraction and AI processing
+- Requires internet connection for transcript extraction
+- Cannot extract transcripts from private or restricted videos
 
 ## Contributing
 
