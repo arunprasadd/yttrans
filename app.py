@@ -1,7 +1,22 @@
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import WebshareProxyConfig
 from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound, NoTranscriptAvailable
 import re
+
+# Initialize YouTube Transcript API with proxy configuration
+try:
+    ytt_api = YouTubeTranscriptApi(
+        proxy_config=WebshareProxyConfig(
+            proxy_username="<proxy-username>",  # Replace with your actual proxy username
+            proxy_password="<proxy-password>",  # Replace with your actual proxy password
+        )
+    )
+    st.sidebar.success("✅ Proxy configured")
+except Exception as e:
+    # Fallback to default API without proxy
+    ytt_api = YouTubeTranscriptApi()
+    st.sidebar.warning("⚠️ Using direct connection (no proxy)")
 
 
 def extract_video_id(youtube_video_url):
@@ -24,7 +39,7 @@ def extract_video_id(youtube_video_url):
 def get_available_transcripts(video_id):
     """Get list of available transcripts for a video"""
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        transcript_list = ytt_api.list_transcripts(video_id)
         available_transcripts = []
         
         for transcript in transcript_list:
@@ -107,6 +122,10 @@ def main():
         3. **Select language** from available options
         4. **View transcript** with timestamps
         5. **Download** transcript as text file
+        
+        **Proxy Status:**
+        - Using proxy to prevent IP bans
+        - Replace proxy credentials in code
         
         **Supported URL formats:**
         - `youtube.com/watch?v=VIDEO_ID`
