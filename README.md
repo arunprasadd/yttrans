@@ -28,7 +28,7 @@ chmod +x nginx-commands.sh
 
 4. **Run SSL setup:**
 ```bash
-./setup-ssl.sh
+bash setup-ssl.sh
 ```
 
 This script will:
@@ -46,7 +46,7 @@ This script will:
 
 Use the management script for easy operations:
 ```bash
-./nginx-commands.sh
+bash nginx-commands.sh
 ```
 
 Available options:
