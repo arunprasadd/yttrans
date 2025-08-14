@@ -191,7 +191,7 @@ def main():
                     transcript_options = []
                     for i, transcript in enumerate(available_transcripts):
                         generated_text = " (Auto-generated)" if transcript['is_generated'] else " (Manual)"
-                        translatable_text = " - Translatable" if transcript.get('is_translatable', False) else ""
+                        translatable_text = " - Translatable" if transcript['is_translatable'] else ""
                         option_text = f"{transcript['language']} ({transcript['language_code']}){generated_text}{translatable_text}"
                         transcript_options.append(option_text)
                     
