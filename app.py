@@ -4,20 +4,11 @@ from youtube_transcript_api.proxies import WebshareProxyConfig
 from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound, NoTranscriptAvailable
 import re
 
-# Initialize YouTube Transcript API with proxy configuration
-try:
-    ytt_api = YouTubeTranscriptApi(
-        proxy_config=WebshareProxyConfig(
-            proxy_username="<proxy-username>",  # Replace with your actual proxy username
-            proxy_password="<proxy-password>",  # Replace with your actual proxy password
-        )
-    )
-    st.sidebar.success("✅ Proxy configured")
-except Exception as e:
-    # Fallback to default API without proxy
-    ytt_api = YouTubeTranscriptApi()
-    st.sidebar.warning("⚠️ Using direct connection (no proxy)")
-
+# Proxy configuration - the correct way according to official docs
+proxy_config = WebshareProxyConfig(
+    proxy_username="labvizce",  # Replace with your actual proxy username
+    proxy_password="x2za3x15c9ah",  # Replace with your actual proxy password
+)
 
 def extract_video_id(youtube_video_url):
     """Extract video ID from different YouTube URL formats"""
@@ -36,10 +27,15 @@ def extract_video_id(youtube_video_url):
     return video_id
 
 
-def get_available_transcripts(video_id):
+def get_available_transcripts(video_id, use_proxy=True):
     """Get list of available transcripts for a video"""
     try:
-        transcript_list = ytt_api.list(video_id)
+        # Use proxy_config parameter in the list() method directly
+        if use_proxy:
+            transcript_list = YouTubeTranscriptApi.list(video_id, proxies=proxy_config)
+        else:
+            transcript_list = YouTubeTranscriptApi.list(video_id)
+            
         available_transcripts = []
         
         for transcript in transcript_list:
@@ -66,12 +62,21 @@ def get_available_transcripts(video_id):
         raise Exception(f"❌ Error accessing video: {str(e)}")
 
 
-def get_transcript_data(transcript_obj):
-    """Get transcript data from transcript object"""
+def get_transcript_data(video_id, language_code, use_proxy=True):
+    """Get transcript data using video_id and language_code directly"""
     try:
-        # Use the transcript object's fetch method as per official docs
-        transcript_data = transcript_obj.fetch()
-        transcript_data = transcript_obj.fetch()
+        # Use the static method get() with proxy configuration
+        if use_proxy:
+            transcript_data = YouTubeTranscriptApi.get_transcript(
+                video_id, 
+                languages=[language_code],
+                proxies=proxy_config
+            )
+        else:
+            transcript_data = YouTubeTranscriptApi.get_transcript(
+                video_id, 
+                languages=[language_code]
+            )
         
         formatted_transcript = ""
         full_text = ""
@@ -127,9 +132,9 @@ def main():
         4. **View transcript** with timestamps
         5. **Download** transcript as text file
         
-        **Proxy Status:**
-        - Using proxy to prevent IP bans
-        - Replace proxy credentials in code
+        **Proxy Configuration:**
+        - Update proxy credentials in the code
+        - Toggle proxy usage if needed
         
         **Supported URL formats:**
         - `youtube.com/watch?v=VIDEO_ID`
@@ -140,6 +145,13 @@ def main():
         - Video must have captions/subtitles enabled
         - Video must be publicly accessible
         """)
+        
+        # Proxy toggle
+        use_proxy = st.checkbox("Use Proxy", value=True)
+        if use_proxy:
+            st.success("✅ Proxy enabled")
+        else:
+            st.warning("⚠️ Using direct connection")
     
     # Main input
     col1, col2 = st.columns([3, 1])
@@ -180,7 +192,7 @@ def main():
             
             with st.spinner("🔍 Checking available transcripts..."):
                 # Get available transcripts
-                available_transcripts = get_available_transcripts(video_id)
+                available_transcripts = get_available_transcripts(video_id, use_proxy)
                 
                 if available_transcripts:
                     st.success(f"✅ Found {len(available_transcripts)} available transcript(s)!")
@@ -222,7 +234,12 @@ def main():
                         
                         with st.spinner(f"🔄 Extracting {selected_transcript['language']} transcript..."):
                             try:
-                                transcript_data = get_transcript_data(selected_transcript['transcript_obj'])
+                                # Use the corrected method
+                                transcript_data = get_transcript_data(
+                                    video_id, 
+                                    selected_transcript['language_code'], 
+                                    use_proxy
+                                )
                                 
                                 st.success(f"✅ {selected_transcript['language']} transcript extracted successfully!")
                                 
