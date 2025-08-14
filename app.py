@@ -1,7 +1,7 @@
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
-from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound, NoTranscriptAvailable
+from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
 import re
 
 # Proxy configuration - the correct way according to official docs
@@ -56,7 +56,7 @@ def get_available_transcripts(video_id, use_proxy=True):
         raise Exception("❌ Transcripts are disabled for this video")
     except VideoUnavailable:
         raise Exception("❌ Video is unavailable or private")
-    except (NoTranscriptFound, NoTranscriptAvailable):
+    except NoTranscriptFound:
         raise Exception("❌ No transcripts found for this video")
     except Exception as e:
         raise Exception(f"❌ Error accessing video: {str(e)}")
