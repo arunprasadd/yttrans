@@ -2,6 +2,72 @@
 
 A Streamlit web application that extracts transcripts from YouTube videos with available captions/subtitles.
 
+## 🌐 Production Setup with SSL (Recommended for Servers)
+
+### Prerequisites for SSL Setup
+- Linux server with public IP
+- Domain name pointing to your server (`api.videotoinfographics.com`)
+- Docker and Docker Compose installed
+- Port 80 and 443 open in firewall
+
+### SSL Setup Steps
+
+1. **Clone/Create project directory:**
+```bash
+mkdir youtube-transcript-extractor
+cd youtube-transcript-extractor
+```
+
+2. **Create all project files** (app.py, Dockerfile, etc.)
+
+3. **Make setup script executable:**
+```bash
+chmod +x setup-ssl.sh
+chmod +x nginx-commands.sh
+```
+
+4. **Run SSL setup:**
+```bash
+./setup-ssl.sh
+```
+
+5. **Access your application:**
+- Visit: `https://api.videotoinfographics.com`
+- HTTP requests automatically redirect to HTTPS
+
+### SSL Management Commands
+
+Use the management script for easy operations:
+```bash
+./nginx-commands.sh
+```
+
+Available options:
+- Start/Stop/Restart application
+- View logs and status
+- Renew SSL certificates
+- Test SSL configuration
+- Check DNS settings
+
+### Manual SSL Commands
+
+```bash
+# Start with SSL
+docker-compose -f docker-compose.prod.yml up -d
+
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f
+
+# Restart
+docker-compose -f docker-compose.prod.yml restart
+
+# Stop
+docker-compose -f docker-compose.prod.yml down
+
+# Renew SSL certificate
+sudo certbot renew
+```
+
 ## Quick Start with Docker (Recommended)
 
 ### Prerequisites
