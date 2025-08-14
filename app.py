@@ -39,7 +39,7 @@ def extract_transcript_details(youtube_video_url):
                 'available_transcripts': available_transcripts,
                 'transcript_data': None
             }
-            
+
         except TranscriptsDisabled:
             raise Exception("Transcripts are disabled for this video")
         except VideoUnavailable:
