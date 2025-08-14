@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Docker Nginx Management Commands for YouTube Transcript Extractor
+# Full Docker Stack Management Commands for YouTube Transcript Extractor
 
 COMPOSE_FILE="docker-compose.prod.yml"
 DOMAIN="api.videotoinfographics.com"
@@ -27,7 +27,7 @@ print_error() { echo -e "${RED}❌ $1${NC}"; }
 
 show_menu() {
     echo ""
-    echo "🐳 Docker Nginx SSL Management for YouTube Transcript Extractor"
+    echo "🐳 Full Docker Stack Management for YouTube Transcript Extractor"
     echo "======================================================="
     echo ""
     echo "1) 🚀 Start application"
@@ -38,7 +38,7 @@ show_menu() {
     echo "6) 🔐 Renew SSL certificate"
     echo "7) 🧪 Test SSL configuration"
     echo "8) 🔍 Check domain DNS"
-    echo "9) 📈 View nginx access logs"
+    echo "9) 📈 View container logs"
     echo "10) 🛠️ Rebuild and restart"
     echo "11) 🧹 Clean up containers"
     echo "12) ❌ Exit"
@@ -115,12 +115,15 @@ renew_ssl() {
     if [ -f "renew-ssl.sh" ]; then
         ./renew-ssl.sh
     else
-        # Fallback to manual renewal
-        sudo certbot renew --quiet --webroot --webroot-path=./nginx/html
-        sudo cp -r /etc/letsencrypt/* ssl/ 2>/dev/null || true
-        sudo cp -r /var/lib/letsencrypt/* ssl-lib/ 2>/dev/null || true
-        sudo chown -R $USER:$USER ssl ssl-lib
-        restart_app
+        # Fallback to Docker Certbot renewal
+        docker run --rm \
+            -v $(pwd)/certbot/conf:/etc/letsencrypt \
+            -v $(pwd)/certbot/www:/var/www/certbot \
+            certbot/certbot:latest \
+            renew --quiet
+        
+        # Reload nginx
+        docker exec nginx-proxy nginx -s reload 2>/dev/null || restart_app
     fi
     
     if [ $? -eq 0 ]; then
@@ -160,9 +163,22 @@ check_dns() {
     fi
 }
 
-view_nginx_logs() {
-    echo "📈 Nginx access logs (Press Ctrl+C to exit):"
-    docker logs -f nginx-proxy 2>/dev/null || print_error "Nginx container not running"
+view_container_logs() {
+    echo "📈 Container logs (Press Ctrl+C to exit):"
+    echo "Choose container:"
+    echo "1) Nginx"
+    echo "2) App"
+    echo "3) Certbot"
+    echo "4) All"
+    read -p "Enter choice (1-4): " choice
+    
+    case $choice in
+        1) docker logs -f nginx-proxy 2>/dev/null || print_error "Nginx container not running" ;;
+        2) docker logs -f youtube-transcript-app 2>/dev/null || print_error "App container not running" ;;
+        3) docker logs -f certbot 2>/dev/null || print_error "Certbot container not running" ;;
+        4) $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE logs -f ;;
+        *) print_error "Invalid choice" ;;
+    esac
 }
 
 rebuild_app() {
@@ -200,7 +216,7 @@ main() {
             6) renew_ssl ;;
             7) test_ssl ;;
             8) check_dns ;;
-            9) view_nginx_logs ;;
+            9) view_container_logs ;;
             10) rebuild_app ;;
             11) cleanup ;;
             12) 

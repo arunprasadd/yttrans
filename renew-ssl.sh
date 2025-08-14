@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# SSL Certificate Renewal Script for Dockerized Setup
-# This script renews SSL certificates and updates the Docker containers
+# SSL Certificate Renewal Script for Full Docker Setup
+# This script manually triggers certificate renewal using Docker Certbot
 
 set -e
 
@@ -33,50 +33,23 @@ echo "======================================"
 # Change to script directory
 cd "$(dirname "$0")"
 
-# Check if certificates exist
-if [ ! -d "ssl/live/$DOMAIN" ]; then
+# Check if certificate directory exists
+if [ ! -d "certbot/conf/live/$DOMAIN" ]; then
     print_error "SSL certificates not found. Please run initial setup first."
     exit 1
 fi
 
-# Stop nginx container temporarily for renewal
-print_status "Stopping nginx container for renewal..."
-$DOCKER_COMPOSE_CMD -f docker-compose.prod.yml stop nginx
-
-# Start temporary nginx for renewal
-print_status "Starting temporary nginx for certificate renewal..."
-docker run -d \
-    --name nginx-renewal \
-    -p 80:80 \
-    -v $(pwd)/nginx/html:/var/www/html \
-    -v $(pwd)/nginx/nginx-temp.conf:/etc/nginx/conf.d/default.conf \
-    nginx:alpine
-
-# Wait for nginx to start
-sleep 3
-
-# Renew certificate
+# Renew certificate using Docker Certbot
 print_status "Renewing SSL certificate..."
-sudo certbot renew \
-    --webroot \
-    --webroot-path=$(pwd)/nginx/html \
-    --quiet
+docker run --rm \
+    -v $(pwd)/certbot/conf:/etc/letsencrypt \
+    -v $(pwd)/certbot/www:/var/www/certbot \
+    certbot/certbot:latest \
+    renew --quiet
 
-# Stop temporary nginx
-docker stop nginx-renewal
-docker rm nginx-renewal
-
-# Copy renewed certificates
-print_status "Updating certificate files..."
-sudo cp -r /etc/letsencrypt/* ssl/ 2>/dev/null || true
-sudo cp -r /var/lib/letsencrypt/* ssl-lib/ 2>/dev/null || true
-
-# Fix permissions
-sudo chown -R $USER:$USER ssl ssl-lib
-
-# Restart the application
-print_status "Restarting application with renewed certificates..."
-$DOCKER_COMPOSE_CMD -f docker-compose.prod.yml start nginx
+# Reload nginx to use renewed certificates
+print_status "Reloading nginx with renewed certificates..."
+docker exec nginx-proxy nginx -s reload
 
 # Wait for services to be ready
 sleep 5

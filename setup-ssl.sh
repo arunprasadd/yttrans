@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # SSL Setup Script for YouTube Transcript Extractor
-# This script sets up Nginx in Docker with SSL certificate using Certbot
+# This script sets up Nginx and Certbot in Docker with SSL certificate
 
 set -e
 
 DOMAIN="api.videotoinfographics.com"
 EMAIL="admin@videotoinfographics.com"  # Change this to your email
 
-echo "🔐 SSL Setup for YouTube Transcript Extractor"
+echo "🔐 Full Docker SSL Setup for YouTube Transcript Extractor"
 echo "=============================================="
 echo "Domain: $DOMAIN"
 echo ""
@@ -94,14 +94,6 @@ install_packages() {
         DOCKER_COMPOSE_CMD="docker-compose"
     fi
     
-    # Install Certbot
-    if ! command -v certbot &> /dev/null; then
-        print_status "Installing Certbot..."
-        sudo apt install -y certbot
-    else
-        print_status "Certbot is already installed"
-    fi
-    
     # Install other utilities
     sudo apt install -y curl dnsutils
 }
@@ -109,8 +101,8 @@ install_packages() {
 # Create necessary directories
 create_directories() {
     echo "📁 Creating necessary directories..."
-    mkdir -p ssl ssl-lib nginx/html
-    sudo chown -R $USER:$USER ssl ssl-lib nginx
+    mkdir -p certbot/conf certbot/www nginx/html
+    sudo chown -R $USER:$USER certbot nginx
 }
 
 # Stop any existing containers and system nginx
@@ -125,20 +117,20 @@ stop_services() {
     sudo systemctl disable nginx 2>/dev/null || true
 }
 
-# Create temporary nginx config for certificate generation
-create_temp_nginx() {
-    echo "📝 Creating temporary nginx configuration for certificate..."
+# Create initial nginx config for certificate generation
+create_initial_nginx() {
+    echo "📝 Creating initial nginx configuration for certificate..."
     
     mkdir -p nginx/html
     
-    # Create a simple nginx config for certificate generation
-    cat > nginx/nginx-temp.conf << EOF
+    # Create initial nginx config that works without SSL first
+    cat > nginx/nginx-initial.conf << EOF
 server {
     listen 80;
     server_name $DOMAIN;
     
     location /.well-known/acme-challenge/ {
-        root /var/www/html;
+        root /var/www/certbot;
     }
     
     location / {
@@ -165,38 +157,34 @@ EOF
 
 # Get SSL certificate
 get_certificate() {
-    echo "🔐 Obtaining SSL certificate..."
+    echo "🔐 Obtaining SSL certificate using Docker Certbot..."
     
-    # Start temporary nginx container for certificate generation
-    docker run -d \
-        --name nginx-temp \
+    # Start nginx with initial config for certificate generation
+    docker run -d --name nginx-initial \
         -p 80:80 \
-        -v $(pwd)/nginx/nginx-temp.conf:/etc/nginx/conf.d/default.conf \
+        -v $(pwd)/nginx/nginx-initial.conf:/etc/nginx/conf.d/default.conf \
         -v $(pwd)/nginx/html:/var/www/html \
+        -v $(pwd)/certbot/www:/var/www/certbot \
         nginx:alpine
     
     # Wait for nginx to be ready
     sleep 5
     
-    # Get certificate using webroot method
-    sudo certbot certonly \
-        --webroot \
-        --webroot-path=$(pwd)/nginx/html \
+    # Get certificate using Docker Certbot
+    docker run --rm \
+        -v $(pwd)/certbot/conf:/etc/letsencrypt \
+        -v $(pwd)/certbot/www:/var/www/certbot \
+        certbot/certbot:latest \
+        certonly --webroot \
+        --webroot-path=/var/www/certbot \
         --email $EMAIL \
         --agree-tos \
         --no-eff-email \
         -d $DOMAIN
     
-    # Stop temporary nginx
-    docker stop nginx-temp || true
-    docker rm nginx-temp || true
-    
-    # Copy certificates to our ssl directory
-    sudo cp -r /etc/letsencrypt/* ssl/ 2>/dev/null || true
-    sudo cp -r /var/lib/letsencrypt/* ssl-lib/ 2>/dev/null || true
-    
-    # Fix permissions
-    sudo chown -R $USER:$USER ssl ssl-lib
+    # Stop initial nginx
+    docker stop nginx-initial || true
+    docker rm nginx-initial || true
     
     print_status "SSL certificate obtained successfully"
 }
@@ -205,33 +193,8 @@ get_certificate() {
 setup_renewal() {
     echo "🔄 Setting up certificate auto-renewal..."
     
-    # Create renewal script that works with Docker
-    cat > renew-ssl.sh << 'EOF'
-#!/bin/bash
-cd "$(dirname "$0")"
-
-# Renew certificate
-sudo certbot renew --quiet --webroot --webroot-path=./nginx/html
-
-# Copy renewed certificates
-sudo cp -r /etc/letsencrypt/* ssl/ 2>/dev/null || true
-sudo cp -r /var/lib/letsencrypt/* ssl-lib/ 2>/dev/null || true
-sudo chown -R $USER:$USER ssl ssl-lib
-
-# Restart nginx container
-if command -v docker-compose &> /dev/null; then
-    docker-compose -f docker-compose.prod.yml restart nginx
-else
-    docker compose -f docker-compose.prod.yml restart nginx
-fi
-EOF
-
-    chmod +x renew-ssl.sh
-    
-    # Create cron job for renewal
-    sudo tee /etc/cron.d/certbot-renew > /dev/null << EOF
-0 12 * * * $USER cd $(pwd) && ./renew-ssl.sh
-EOF
+    # The certbot container in docker-compose.prod.yml handles auto-renewal
+    # It checks every 12 hours and renews if needed
     
     print_status "Auto-renewal configured"
 }
@@ -284,10 +247,10 @@ main() {
     check_root
     
     echo "This script will:"
-    echo "1. Install Docker and Certbot"
+    echo "1. Install Docker (Certbot will run in Docker)"
     echo "2. Check domain DNS configuration"
-    echo "3. Obtain SSL certificate from Let's Encrypt"
-    echo "4. Configure Nginx as reverse proxy"
+    echo "3. Obtain SSL certificate using Docker Certbot"
+    echo "4. Configure Nginx as reverse proxy in Docker"
     echo "5. Start the application with HTTPS"
     echo ""
     
@@ -308,7 +271,7 @@ main() {
     check_domain
     create_directories
     stop_services
-    create_temp_nginx
+    create_initial_nginx
     get_certificate
     setup_renewal
     start_application
