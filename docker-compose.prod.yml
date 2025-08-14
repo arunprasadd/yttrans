@@ -15,6 +15,7 @@ services:
       start_period: 40s
     networks:
       - app-network
+    # Don't expose port directly - only through nginx
 
   nginx:
     image: nginx:alpine
@@ -24,8 +25,9 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/lib/letsencrypt:/var/lib/letsencrypt:ro
+      - ./ssl:/etc/letsencrypt:ro
+      - ./ssl-lib:/var/lib/letsencrypt:ro
+      - ./nginx/html:/var/www/html
     depends_on:
       - youtube-transcript-app
     restart: unless-stopped

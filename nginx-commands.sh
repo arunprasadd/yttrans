@@ -1,9 +1,19 @@
 #!/bin/bash
 
-# Nginx Management Commands for YouTube Transcript Extractor
+# Docker Nginx Management Commands for YouTube Transcript Extractor
 
 COMPOSE_FILE="docker-compose.prod.yml"
 DOMAIN="api.videotoinfographics.com"
+
+# Detect docker compose command
+if docker compose version &> /dev/null; then
+    DOCKER_COMPOSE_CMD="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE_CMD="docker-compose"
+else
+    echo "❌ Docker Compose not found!"
+    exit 1
+fi
 
 # Colors
 GREEN='\033[0;32m'
@@ -17,7 +27,7 @@ print_error() { echo -e "${RED}❌ $1${NC}"; }
 
 show_menu() {
     echo ""
-    echo "🌐 Nginx SSL Management for YouTube Transcript Extractor"
+    echo "🐳 Docker Nginx SSL Management for YouTube Transcript Extractor"
     echo "======================================================="
     echo ""
     echo "1) 🚀 Start application"
@@ -37,26 +47,26 @@ show_menu() {
 
 start_app() {
     print_status "Starting application..."
-    docker-compose -f $COMPOSE_FILE up -d
+    $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE up -d
     sleep 5
     check_status
 }
 
 stop_app() {
     print_status "Stopping application..."
-    docker-compose -f $COMPOSE_FILE down
+    $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE down
 }
 
 restart_app() {
     print_status "Restarting application..."
-    docker-compose -f $COMPOSE_FILE restart
+    $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE restart
     sleep 5
     check_status
 }
 
 view_logs() {
     echo "📋 Application logs (Press Ctrl+C to exit):"
-    docker-compose -f $COMPOSE_FILE logs -f
+    $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE logs -f
 }
 
 check_status() {
@@ -64,9 +74,9 @@ check_status() {
     echo "====================="
     
     # Check containers
-    if docker-compose -f $COMPOSE_FILE ps | grep -q "Up"; then
+    if $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE ps | grep -q "Up"; then
         print_status "Containers are running"
-        docker-compose -f $COMPOSE_FILE ps
+        $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE ps
     else
         print_error "Containers are not running"
         return 1
@@ -100,10 +110,21 @@ check_status() {
 
 renew_ssl() {
     print_status "Renewing SSL certificate..."
-    sudo certbot renew --quiet
+    
+    # Use the renewal script if it exists
+    if [ -f "renew-ssl.sh" ]; then
+        ./renew-ssl.sh
+    else
+        # Fallback to manual renewal
+        sudo certbot renew --quiet --webroot --webroot-path=./nginx/html
+        sudo cp -r /etc/letsencrypt/* ssl/ 2>/dev/null || true
+        sudo cp -r /var/lib/letsencrypt/* ssl-lib/ 2>/dev/null || true
+        sudo chown -R $USER:$USER ssl ssl-lib
+        restart_app
+    fi
+    
     if [ $? -eq 0 ]; then
         print_status "Certificate renewed successfully"
-        restart_app
     else
         print_error "Certificate renewal failed"
     fi
@@ -146,8 +167,8 @@ view_nginx_logs() {
 
 rebuild_app() {
     print_status "Rebuilding and restarting application..."
-    docker-compose -f $COMPOSE_FILE down
-    docker-compose -f $COMPOSE_FILE up -d --build
+    $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE down
+    $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE up -d --build
     sleep 5
     check_status
 }
@@ -158,7 +179,7 @@ cleanup() {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_status "Cleaning up..."
-        docker-compose -f $COMPOSE_FILE down --rmi all --volumes --remove-orphans
+        $DOCKER_COMPOSE_CMD -f $COMPOSE_FILE down --rmi all --volumes --remove-orphans
         docker system prune -f
         print_status "Cleanup completed"
     fi

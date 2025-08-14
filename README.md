@@ -2,12 +2,12 @@
 
 A Streamlit web application that extracts transcripts from YouTube videos with available captions/subtitles.
 
-## 🌐 Production Setup with SSL (Recommended for Servers)
+## 🐳 Production Setup with Docker + SSL (Recommended for Servers)
 
 ### Prerequisites for SSL Setup
 - Linux server with public IP
 - Domain name pointing to your server (`api.videotoinfographics.com`)
-- Docker and Docker Compose installed
+- Docker and Docker Compose
 - Port 80 and 443 open in firewall
 
 ### SSL Setup Steps
@@ -31,6 +31,13 @@ chmod +x nginx-commands.sh
 ./setup-ssl.sh
 ```
 
+This script will:
+- Install Docker and Certbot automatically
+- Create SSL certificates using Let's Encrypt
+- Set up Nginx as a reverse proxy (running in Docker)
+- Configure automatic certificate renewal
+- Start the entire application stack
+
 5. **Access your application:**
 - Visit: `https://api.videotoinfographics.com`
 - HTTP requests automatically redirect to HTTPS
@@ -48,25 +55,39 @@ Available options:
 - Renew SSL certificates
 - Test SSL configuration
 - Check DNS settings
+- Rebuild containers
+- Clean up resources
 
 ### Manual SSL Commands
 
 ```bash
-# Start with SSL
+# Start with SSL (all containers)
 docker-compose -f docker-compose.prod.yml up -d
 
+# Or using docker compose plugin
+docker compose -f docker-compose.prod.yml up -d
+
 # View logs
-docker-compose -f docker-compose.prod.yml logs -f
+docker compose -f docker-compose.prod.yml logs -f
 
 # Restart
-docker-compose -f docker-compose.prod.yml restart
+docker compose -f docker-compose.prod.yml restart
 
 # Stop
-docker-compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml down
 
 # Renew SSL certificate
-sudo certbot renew
+./renew-ssl.sh
 ```
+
+### Key Features of Docker Setup
+
+- **Fully Containerized**: Both application and Nginx run in Docker
+- **Automatic SSL**: Let's Encrypt certificates with auto-renewal
+- **Security Headers**: HSTS, XSS protection, content security
+- **Health Checks**: Container health monitoring
+- **Easy Management**: Simple scripts for all operations
+- **Scalable**: Easy to move to cloud or scale horizontally
 
 ## Quick Start with Docker (Recommended)
 

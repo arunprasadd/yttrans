@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # SSL Setup Script for YouTube Transcript Extractor
-# This script sets up Nginx with SSL certificate using Certbot
+# This script sets up Nginx in Docker with SSL certificate using Certbot
 
 set -e
 
@@ -74,7 +74,7 @@ install_packages() {
     # Install Docker if not present
     if ! command -v docker &> /dev/null; then
         print_status "Installing Docker..."
-        sudo apt install -y docker.io docker-compose
+        sudo apt install -y docker.io docker-compose-plugin
         sudo systemctl start docker
         sudo systemctl enable docker
         sudo usermod -aG docker $USER
@@ -83,44 +83,83 @@ install_packages() {
         print_status "Docker is already installed"
     fi
     
+    # Check if docker compose plugin is available, fallback to docker-compose
+    if docker compose version &> /dev/null; then
+        DOCKER_COMPOSE_CMD="docker compose"
+    elif command -v docker-compose &> /dev/null; then
+        DOCKER_COMPOSE_CMD="docker-compose"
+    else
+        print_status "Installing docker-compose..."
+        sudo apt install -y docker-compose
+        DOCKER_COMPOSE_CMD="docker-compose"
+    fi
+    
     # Install Certbot
     if ! command -v certbot &> /dev/null; then
         print_status "Installing Certbot..."
-        sudo apt install -y certbot python3-certbot-nginx
+        sudo apt install -y certbot
     else
         print_status "Certbot is already installed"
     fi
     
     # Install other utilities
-    sudo apt install -y curl dig nginx
+    sudo apt install -y curl dnsutils
 }
 
-# Stop any existing nginx service
-stop_nginx() {
-    echo "🛑 Stopping system nginx if running..."
+# Create necessary directories
+create_directories() {
+    echo "📁 Creating necessary directories..."
+    mkdir -p ssl ssl-lib nginx/html
+    sudo chown -R $USER:$USER ssl ssl-lib nginx
+}
+
+# Stop any existing containers and system nginx
+stop_services() {
+    echo "🛑 Stopping existing services..."
+    
+    # Stop Docker containers if running
+    $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml down 2>/dev/null || true
+    
+    # Stop system nginx if running
     sudo systemctl stop nginx 2>/dev/null || true
     sudo systemctl disable nginx 2>/dev/null || true
 }
 
-# Create initial nginx config for certificate generation
-create_initial_nginx() {
-    echo "📝 Creating initial nginx configuration..."
+# Create temporary nginx config for certificate generation
+create_temp_nginx() {
+    echo "📝 Creating temporary nginx configuration for certificate..."
     
-    mkdir -p nginx
+    mkdir -p nginx/html
     
-    cat > nginx/nginx-initial.conf << EOF
+    # Create a simple nginx config for certificate generation
+    cat > nginx/nginx-temp.conf << EOF
 server {
     listen 80;
     server_name $DOMAIN;
     
     location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
+        root /var/www/html;
     }
     
     location / {
-        return 301 https://\$server_name\$request_uri;
+        root /var/www/html;
+        index index.html;
     }
 }
+EOF
+
+    # Create a simple index.html
+    cat > nginx/html/index.html << EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Setting up SSL...</title>
+</head>
+<body>
+    <h1>Setting up SSL certificate...</h1>
+    <p>Please wait while we configure your YouTube Transcript Extractor.</p>
+</body>
+</html>
 EOF
 }
 
@@ -128,24 +167,21 @@ EOF
 get_certificate() {
     echo "🔐 Obtaining SSL certificate..."
     
-    # Create directory for certbot challenges
-    sudo mkdir -p /var/www/certbot
-    
-    # Run nginx temporarily for certificate generation
-    docker run --rm -d \
+    # Start temporary nginx container for certificate generation
+    docker run -d \
         --name nginx-temp \
         -p 80:80 \
-        -v $(pwd)/nginx/nginx-initial.conf:/etc/nginx/conf.d/default.conf \
-        -v /var/www/certbot:/var/www/certbot \
+        -v $(pwd)/nginx/nginx-temp.conf:/etc/nginx/conf.d/default.conf \
+        -v $(pwd)/nginx/html:/var/www/html \
         nginx:alpine
     
-    # Wait for nginx to start
+    # Wait for nginx to be ready
     sleep 5
     
-    # Get certificate
+    # Get certificate using webroot method
     sudo certbot certonly \
         --webroot \
-        --webroot-path=/var/www/certbot \
+        --webroot-path=$(pwd)/nginx/html \
         --email $EMAIL \
         --agree-tos \
         --no-eff-email \
@@ -153,6 +189,14 @@ get_certificate() {
     
     # Stop temporary nginx
     docker stop nginx-temp || true
+    docker rm nginx-temp || true
+    
+    # Copy certificates to our ssl directory
+    sudo cp -r /etc/letsencrypt/* ssl/ 2>/dev/null || true
+    sudo cp -r /var/lib/letsencrypt/* ssl-lib/ 2>/dev/null || true
+    
+    # Fix permissions
+    sudo chown -R $USER:$USER ssl ssl-lib
     
     print_status "SSL certificate obtained successfully"
 }
@@ -161,9 +205,32 @@ get_certificate() {
 setup_renewal() {
     echo "🔄 Setting up certificate auto-renewal..."
     
-    # Create renewal script
+    # Create renewal script that works with Docker
+    cat > renew-ssl.sh << 'EOF'
+#!/bin/bash
+cd "$(dirname "$0")"
+
+# Renew certificate
+sudo certbot renew --quiet --webroot --webroot-path=./nginx/html
+
+# Copy renewed certificates
+sudo cp -r /etc/letsencrypt/* ssl/ 2>/dev/null || true
+sudo cp -r /var/lib/letsencrypt/* ssl-lib/ 2>/dev/null || true
+sudo chown -R $USER:$USER ssl ssl-lib
+
+# Restart nginx container
+if command -v docker-compose &> /dev/null; then
+    docker-compose -f docker-compose.prod.yml restart nginx
+else
+    docker compose -f docker-compose.prod.yml restart nginx
+fi
+EOF
+
+    chmod +x renew-ssl.sh
+    
+    # Create cron job for renewal
     sudo tee /etc/cron.d/certbot-renew > /dev/null << EOF
-0 12 * * * root certbot renew --quiet --deploy-hook "docker-compose -f $(pwd)/docker-compose.prod.yml restart nginx"
+0 12 * * * $USER cd $(pwd) && ./renew-ssl.sh
 EOF
     
     print_status "Auto-renewal configured"
@@ -173,11 +240,8 @@ EOF
 start_application() {
     echo "🚀 Starting application with SSL..."
     
-    # Stop any existing containers
-    docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
-    
     # Build and start
-    docker-compose -f docker-compose.prod.yml up -d --build
+    $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml up -d --build
     
     print_status "Application started successfully"
 }
@@ -209,10 +273,10 @@ test_setup() {
     echo "Your application should be available at: https://$DOMAIN"
     echo ""
     echo "To check logs:"
-    echo "  docker-compose -f docker-compose.prod.yml logs -f"
+    echo "  $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f"
     echo ""
     echo "To restart:"
-    echo "  docker-compose -f docker-compose.prod.yml restart"
+    echo "  $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml restart"
 }
 
 # Main execution
@@ -242,8 +306,9 @@ main() {
     
     install_packages
     check_domain
-    stop_nginx
-    create_initial_nginx
+    create_directories
+    stop_services
+    create_temp_nginx
     get_certificate
     setup_renewal
     start_application
