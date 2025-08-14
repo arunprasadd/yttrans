@@ -1,6 +1,6 @@
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
+from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound, NoTranscriptAvailable
 import re
 
 
@@ -32,7 +32,7 @@ def get_available_transcripts(video_id):
                 'language': transcript.language,
                 'language_code': transcript.language_code,
                 'is_generated': transcript.is_generated,
-                'is_translatable': transcript.is_translatable,
+                'is_translatable': transcript.is_translatable if hasattr(transcript, 'is_translatable') else False,
                 'transcript_obj': transcript
             }
             available_transcripts.append(transcript_info)
@@ -43,7 +43,7 @@ def get_available_transcripts(video_id):
         raise Exception("❌ Transcripts are disabled for this video")
     except VideoUnavailable:
         raise Exception("❌ Video is unavailable or private")
-    except NoTranscriptFound:
+    except (NoTranscriptFound, NoTranscriptAvailable):
         raise Exception("❌ No transcripts found for this video")
     except Exception as e:
         raise Exception(f"❌ Error accessing video: {str(e)}")
@@ -168,7 +168,7 @@ def main():
                     transcript_options = []
                     for i, transcript in enumerate(available_transcripts):
                         generated_text = " (Auto-generated)" if transcript['is_generated'] else " (Manual)"
-                        translatable_text = " - Translatable" if transcript['is_translatable'] else ""
+                        translatable_text = " - Translatable" if transcript.get('is_translatable', False) else ""
                         option_text = f"{transcript['language']} ({transcript['language_code']}){generated_text}{translatable_text}"
                         transcript_options.append(option_text)
                     
@@ -187,10 +187,10 @@ def main():
                     with st.expander("📊 Transcript Details", expanded=True):
                         for transcript in available_transcripts:
                             icon = "🤖" if transcript['is_generated'] else "👤"
-                            translate_icon = "🌐" if transcript['is_translatable'] else "🚫"
+                            translate_icon = "🌐" if transcript.get('is_translatable', False) else "🚫"
                             st.write(f"{icon} **{transcript['language']}** ({transcript['language_code']})")
                             st.write(f"   • Type: {'Auto-generated' if transcript['is_generated'] else 'Manual'}")
-                            st.write(f"   • Translatable: {translate_icon} {'Yes' if transcript['is_translatable'] else 'No'}")
+                            st.write(f"   • Translatable: {translate_icon} {'Yes' if transcript.get('is_translatable', False) else 'No'}")
                             st.divider()
                     
                     # Extract selected transcript
