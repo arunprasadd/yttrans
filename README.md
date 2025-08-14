@@ -2,6 +2,81 @@
 
 A Streamlit web application that extracts transcripts from YouTube videos with available captions/subtitles.
 
+## Quick Start with Docker (Recommended)
+
+### Prerequisites
+- Docker installed on your system
+- Docker Compose (optional but recommended)
+
+### Option 1: Using the Setup Script (Easiest)
+
+1. **Make the setup script executable:**
+```bash
+chmod +x docker-setup.sh
+```
+
+2. **Run the setup script:**
+```bash
+./docker-setup.sh
+```
+
+3. **Follow the interactive menu** to build and run the application
+
+### Option 2: Using Docker Compose
+
+1. **Build and run:**
+```bash
+docker-compose up -d
+```
+
+2. **Access the application:**
+Open your browser and go to `http://localhost:8501`
+
+3. **Stop the application:**
+```bash
+docker-compose down
+```
+
+### Option 3: Using Docker Only
+
+1. **Build the image:**
+```bash
+docker build -t youtube-transcript-extractor .
+```
+
+2. **Run the container:**
+```bash
+docker run -d -p 8501:8501 --name youtube-transcript-app youtube-transcript-extractor
+```
+
+3. **Stop the container:**
+```bash
+docker stop youtube-transcript-app
+docker rm youtube-transcript-app
+```
+
+## Docker Commands Reference
+
+```bash
+# Build image
+docker build -t youtube-transcript-extractor .
+
+# Run container
+docker run -d -p 8501:8501 --name youtube-transcript-app youtube-transcript-extractor
+
+# View logs
+docker logs youtube-transcript-app
+
+# Stop container
+docker stop youtube-transcript-app
+
+# Remove container
+docker rm youtube-transcript-app
+
+# View running containers
+docker ps
+```
+
 ## Features
 
 - 📺 Extract transcripts from any YouTube video
@@ -11,7 +86,7 @@ A Streamlit web application that extracts transcripts from YouTube videos with a
 - 💾 Download transcripts in multiple formats
 - 📊 Display transcript statistics (word count, duration)
 
-## Setup
+## Manual Setup (Without Docker)
 
 ### Prerequisites
 
@@ -22,7 +97,7 @@ A Streamlit web application that extracts transcripts from YouTube videos with a
 1. Clone this repository:
 ```bash
 git clone <your-repo-url>
-cd youtube-transcriber
+cd youtube-transcript-extractor
 ```
 
 2. Install dependencies:
