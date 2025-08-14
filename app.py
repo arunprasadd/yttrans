@@ -39,15 +39,17 @@ def extract_video_id(youtube_video_url):
 def get_available_transcripts(video_id):
     """Get list of available transcripts for a video"""
     try:
-        transcript_list = ytt_api.list_transcripts(video_id)
+        transcript_list = ytt_api.list(video_id)
         available_transcripts = []
         
         for transcript in transcript_list:
             transcript_info = {
+                'video_id': transcript.video_id,
                 'language': transcript.language,
                 'language_code': transcript.language_code,
                 'is_generated': transcript.is_generated,
-                'is_translatable': transcript.is_translatable if hasattr(transcript, 'is_translatable') else False,
+                'is_translatable': transcript.is_translatable,
+                'translation_languages': transcript.translation_languages,
                 'transcript_obj': transcript
             }
             available_transcripts.append(transcript_info)
@@ -67,8 +69,8 @@ def get_available_transcripts(video_id):
 def get_transcript_data(transcript_obj):
     """Get transcript data from transcript object"""
     try:
-        # Use the proxied API instance to fetch transcript data
-        # transcript_obj contains the video_id and language info we need
+        # Use the transcript object's fetch method as per official docs
+        transcript_data = transcript_obj.fetch()
         transcript_data = transcript_obj.fetch()
         
         formatted_transcript = ""
@@ -220,7 +222,7 @@ def main():
                         
                         with st.spinner(f"🔄 Extracting {selected_transcript['language']} transcript..."):
                             try:
-                                transcript_data = get_transcript_data(selected_transcript['transcript_obj'], video_id)
+                                transcript_data = get_transcript_data(selected_transcript['transcript_obj'])
                                 
                                 st.success(f"✅ {selected_transcript['language']} transcript extracted successfully!")
                                 
