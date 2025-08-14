@@ -41,13 +41,13 @@ def extract_transcript_details(youtube_video_url):
             }
 
         except TranscriptsDisabled:
-            raise Exception("Transcripts are disabled for this video")
+            raise Exception("❌ Transcripts are disabled for this video. The video creator has disabled captions/subtitles. Please try a different video that has captions enabled.")
         except VideoUnavailable:
-            raise Exception("Video is unavailable (may be private, deleted, or region-blocked)")
+            raise Exception("❌ Video is unavailable. This could be because the video is private, deleted, age-restricted, or region-blocked. Please check the video URL and try again.")
         except NoTranscriptFound:
-            raise Exception("No transcripts found for this video")
+            raise Exception("❌ No transcripts found for this video. The video may not have captions or subtitles available. Try a video with auto-generated or manual captions.")
         except Exception as e:
-            raise Exception(f"Error accessing video: {str(e)}")
+            raise Exception(f"❌ Error accessing video: {str(e)}. Please check if the video URL is correct and the video is publicly accessible.")
 
     except Exception as e:
         raise e
@@ -125,7 +125,16 @@ def main():
         - `youtu.be/VIDEO_ID`
         - `youtube.com/embed/VIDEO_ID`
         
-        **Note:** Only works with videos that have captions/subtitles available.
+        **Requirements:**
+        - Video must have captions/subtitles enabled
+        - Video must be publicly accessible
+        - Video cannot have transcripts disabled by creator
+        
+        **Try these test videos:**
+        - TED Talks (usually have captions)
+        - Educational channels
+        - News videos
+        - Popular YouTube channels
         """)
 
     col1, col2 = st.columns([2, 1])
