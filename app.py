@@ -8,8 +8,8 @@ import re
 def get_youtube_api_instance():
     """Get YouTube API instance with optional proxy configuration"""
     # Hardcoded proxy credentials - replace with your actual credentials
-    proxy_username = "your-proxy-username"  # Replace with your actual username
-    proxy_password = "your-proxy-password"  # Replace with your actual password
+    proxy_username = "labvizce"  # Replace with your actual username
+    proxy_password = "x2za3x15c9ah"  # Replace with your actual password
     
     if proxy_username and proxy_password:
         try:
