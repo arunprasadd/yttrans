@@ -12,26 +12,20 @@ def get_youtube_api_instance():
     
     try:
         # Try to import proxy support
-        from youtube_transcript_api.proxies import WebshareProxyConfig
+        from youtube_transcript_api._api import YouTubeTranscriptApi
         
         if proxy_username and proxy_password:
             try:
-                # Create proxy config
-                proxy_config = WebshareProxyConfig(
-                    proxy_username=proxy_username,
-                    proxy_password=proxy_password
-                )
-                # Return API instance with proxy
-                return YouTubeTranscriptApi(proxy_config=proxy_config)
+                # For version 1.2.2, use proxies parameter in get_transcript
+                return YouTubeTranscriptApi
             except Exception as e:
                 st.warning(f"⚠️ Proxy configuration failed: {str(e)}. Using direct connection.")
                 # Fallback to direct connection
-                return YouTubeTranscriptApi()
+                return YouTubeTranscriptApi
     except ImportError:
         st.info("ℹ️ Proxy support not available in this version. Using direct connection.")
     
     # Fallback to direct connection
-    return YouTubeTranscriptApi()
 
 
 def extract_transcript_details(youtube_video_url):
@@ -50,16 +44,13 @@ def extract_transcript_details(youtube_video_url):
         if not video_id:
             raise ValueError("Could not extract video ID from URL")
 
-        # Get API instance (with or without proxy)
-        api_instance = get_youtube_api_instance()
-
-        # Use fetch method to get transcript data
+        # Use list_transcripts method to get available transcripts
         try:
-            transcript_data = api_instance.fetch(video_id)
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
             available_transcripts = []
 
-            # Extract available transcripts from fetched data
-            for transcript in transcript_data:
+            # Extract available transcripts from transcript list
+            for transcript in transcript_list:
                 transcript_info = {
                     'language': transcript.language,
                     'language_code': transcript.language_code,
@@ -71,7 +62,7 @@ def extract_transcript_details(youtube_video_url):
             return {
                 'video_id': video_id,
                 'available_transcripts': available_transcripts,
-                'transcript_data': transcript_data
+                'transcript_list': transcript_list
             }
 
         except TranscriptsDisabled:
@@ -90,11 +81,8 @@ def extract_transcript_details(youtube_video_url):
 def get_transcript_by_language(video_id, language_code):
     """Get transcript for specific language"""
     try:
-        # Get API instance (with or without proxy)
-        api_instance = get_youtube_api_instance()
-        
-        # Use fetch method to get all transcripts first
-        transcript_list = api_instance.fetch(video_id)
+        # Get transcript list first
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         
         # Find the specific transcript by language code
         selected_transcript = None
@@ -305,7 +293,7 @@ def main():
                         with st.spinner(f"🔄 Extracting {selected_lang_name} transcript..."):
                             try:
                                 final_transcript = get_transcript_by_language(
-                                    transcript_data['video_id'],
+                                    transcript_details['video_id'],
                                     selected_lang_code
                                 )
 
