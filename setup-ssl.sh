@@ -6,7 +6,7 @@
 set -e
 
 DOMAIN="api.videotoinfographics.com"
-EMAIL="admin@videotoinfographics.com"  # Change this to your email
+EMAIL="darunprasad@hotmail.com"  # Change this to your email
 
 echo "🔐 Full Docker SSL Setup for YouTube Transcript Extractor"
 echo "=============================================="
