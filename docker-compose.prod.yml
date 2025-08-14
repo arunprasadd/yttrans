@@ -26,7 +26,6 @@ services:
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
       - ./nginx/html:/var/www/html
-      - ./certbot/conf/live/api.videotoinfographics.com:/etc/letsencrypt/live/api.videotoinfographics.com:ro
     depends_on:
       - youtube-transcript-app
     restart: unless-stopped
