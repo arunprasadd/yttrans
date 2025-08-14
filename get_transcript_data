@@ -1,0 +1,13 @@
+@@ .. @@
+-def get_transcript_data(transcript_obj):
++def get_transcript_data(transcript_obj, video_id):
+     """Get transcript data from transcript object"""
+     try:
+-        # Use the proxied API instance to fetch transcript data
+-        # transcript_obj contains the video_id and language info we need
+-        transcript_data = transcript_obj.fetch()
++        # Use the proxied API instance with video_id as per official docs
++        transcript_data = ytt_api.fetch(video_id)
+         
+         formatted_transcript = ""
+         full_text = ""

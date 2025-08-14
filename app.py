@@ -220,7 +220,7 @@ def main():
                         
                         with st.spinner(f"🔄 Extracting {selected_transcript['language']} transcript..."):
                             try:
-                                transcript_data = get_transcript_data(selected_transcript['transcript_obj'])
+                                transcript_data = get_transcript_data(selected_transcript['transcript_obj'], video_id)
                                 
                                 st.success(f"✅ {selected_transcript['language']} transcript extracted successfully!")
                                 
