@@ -10,7 +10,7 @@ echo "=============================================="
 
 # Function to check if Docker is installed
 check_docker() {
-    if ! command -v docker &> /dev/null; then
+    if ! command -v docker > /dev/null 2>&1; then
         echo "❌ Docker is not installed. Please install Docker first."
         echo "Visit: https://docs.docker.com/get-docker/"
         exit 1
@@ -20,7 +20,7 @@ check_docker() {
 
 # Function to check if Docker Compose is installed
 check_docker_compose() {
-    if ! command -v docker-compose &> /dev/null; then
+    if ! command -v docker-compose > /dev/null 2>&1; then
         echo "⚠️  Docker Compose is not installed. Using docker compose instead."
         DOCKER_COMPOSE_CMD="docker compose"
     else
@@ -59,7 +59,7 @@ run_with_docker() {
 # Function to stop the application
 stop_app() {
     echo "🛑 Stopping application..."
-    if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; then
+    if command -v docker-compose > /dev/null 2>&1 || command -v docker > /dev/null 2>&1; then
         $DOCKER_COMPOSE_CMD down 2>/dev/null || docker stop youtube-transcript-app 2>/dev/null || true
         docker rm youtube-transcript-app 2>/dev/null || true
     fi

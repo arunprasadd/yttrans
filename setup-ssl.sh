@@ -96,7 +96,7 @@ install_packages() {
     fi
     
     # Install Docker if not present
-    if ! command -v docker &> /dev/null; then
+    if ! command -v docker > /dev/null 2>&1; then
         print_status "Installing Docker..."
         if [[ $EUID -eq 0 ]]; then
             apt install -y docker.io docker-compose-plugin
@@ -114,9 +114,9 @@ install_packages() {
     fi
     
     # Check if docker compose plugin is available, fallback to docker-compose
-    if docker compose version &> /dev/null; then
+    if docker compose version > /dev/null 2>&1; then
         DOCKER_COMPOSE_CMD="docker compose"
-    elif command -v docker-compose &> /dev/null; then
+    elif command -v docker-compose > /dev/null 2>&1; then
         DOCKER_COMPOSE_CMD="docker-compose"
     else
         print_status "Installing docker-compose..."

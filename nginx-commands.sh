@@ -6,9 +6,9 @@ COMPOSE_FILE="docker-compose.prod.yml"
 DOMAIN="api.videotoinfographics.com"
 
 # Detect docker compose command
-if docker compose version &> /dev/null; then
+if docker compose version > /dev/null 2>&1; then
     DOCKER_COMPOSE_CMD="docker compose"
-elif command -v docker-compose &> /dev/null; then
+elif command -v docker-compose > /dev/null 2>&1; then
     DOCKER_COMPOSE_CMD="docker-compose"
 else
     echo "❌ Docker Compose not found!"

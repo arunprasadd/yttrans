@@ -18,9 +18,9 @@ print_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
 print_error() { echo -e "${RED}❌ $1${NC}"; }
 
 # Detect docker compose command
-if docker compose version &> /dev/null; then
+if docker compose version > /dev/null 2>&1; then
     DOCKER_COMPOSE_CMD="docker compose"
-elif command -v docker-compose &> /dev/null; then
+elif command -v docker-compose > /dev/null 2>&1; then
     DOCKER_COMPOSE_CMD="docker-compose"
 else
     print_error "Docker Compose not found!"
