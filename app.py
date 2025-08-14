@@ -60,5 +60,5 @@ if st.button("Get Transcript"):
         if err:
             st.error(err)
         else:
-            text = "\n".join([f"[{round(t['start'],1)}s] {t['text']}" for t in transcript])
+            text = "\n".join([f"[{round(t.start, 1)}s] {t.text}" for t in transcript])
             st.text_area("Transcript", text, height=400)
