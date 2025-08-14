@@ -4,7 +4,7 @@ from youtube_transcript_api.proxies import WebshareProxyConfig
 from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
 
 # --- Proxy configuration ---
-PROXY_USERNAME = "labvizce"  # Replace
+PROXY_USERNAME = "labvizce-staticresidential"  # Replace
 PROXY_PASSWORD = "x2za3x15c9ah"  # Replace
 
 try:
