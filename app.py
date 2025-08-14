@@ -1,6 +1,12 @@
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
+try:
+    from youtube_transcript_api.proxies import WebshareProxyConfig
+    PROXY_SUPPORT = True
+except ImportError:
+    PROXY_SUPPORT = False
+    st.warning("⚠️ Proxy support not available in this version of youtube-transcript-api")
 import re
 
 
@@ -10,22 +16,6 @@ def get_youtube_api_instance():
     proxy_username = "labvizce"  # Replace with your actual username
     proxy_password = "x2za3x15c9ah"  # Replace with your actual password
     
-    try:
-        # Try to import proxy support
-        from youtube_transcript_api._api import YouTubeTranscriptApi
-        
-        if proxy_username and proxy_password:
-            try:
-                # For version 1.2.2, use proxies parameter in get_transcript
-                return YouTubeTranscriptApi
-            except Exception as e:
-                st.warning(f"⚠️ Proxy configuration failed: {str(e)}. Using direct connection.")
-                # Fallback to direct connection
-                return YouTubeTranscriptApi
-    except ImportError:
-        st.info("ℹ️ Proxy support not available in this version. Using direct connection.")
-    
-    # Fallback to direct connection
 
 
 def extract_transcript_details(youtube_video_url):
