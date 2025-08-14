@@ -4,21 +4,19 @@ from youtube_transcript_api.proxies import WebshareProxyConfig
 from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
 import re
 
-# Proxy configuration with HTTPS support
+# Proxy configuration - the correct way according to official docs
 try:
     ytt_api = YouTubeTranscriptApi(
         proxy_config=WebshareProxyConfig(
-            proxy_username="<proxy-username>",  # Replace with your actual Webshare proxy username
-            proxy_password="<proxy-password>",  # Replace with your actual Webshare proxy password
+            proxy_username="labvizce",  # Replace with your actual proxy username
+            proxy_password="x2za3x15c9ah",  # Replace with your actual proxy password
         )
     )
     proxy_available = True
-    st.sidebar.success("✅ Proxy configured")
 except Exception as e:
     # Fallback to default API without proxy
     ytt_api = YouTubeTranscriptApi()
     proxy_available = False
-    st.sidebar.error(f"❌ Proxy failed: {str(e)}")
 
 def extract_video_id(youtube_video_url):
     """Extract video ID from different YouTube URL formats"""
@@ -70,10 +68,7 @@ def get_available_transcripts(video_id, use_proxy=True):
     except NoTranscriptFound:
         raise Exception("❌ No transcripts found for this video")
     except Exception as e:
-        if "429" in str(e) or "too many" in str(e).lower():
-            raise Exception("❌ IP BANNED: Too many requests. You MUST configure a valid proxy to continue.")
-        else:
-            raise Exception(f"❌ Error accessing video: {str(e)}")
+        raise Exception(f"❌ Error accessing video: {str(e)}")
 
 
 def get_transcript_data(video_id, language_code, use_proxy=True):
@@ -112,10 +107,7 @@ def get_transcript_data(video_id, language_code, use_proxy=True):
         }
         
     except Exception as e:
-        if "429" in str(e) or "too many" in str(e).lower():
-            raise Exception("❌ IP BANNED: Configure a valid Webshare proxy to avoid rate limits.")
-        else:
-            raise Exception(f"❌ Error fetching transcript: {str(e)}")
+        raise Exception(f"❌ Error fetching transcript: {str(e)}")
 
 
 def format_timestamp(seconds):
@@ -150,9 +142,8 @@ def main():
         5. **Download** transcript as text file
         
         **Proxy Configuration:**
-        - **IMPORTANT**: Replace `<proxy-username>` and `<proxy-password>` with your actual Webshare credentials
-        - Without valid proxy, you'll get IP banned (429 errors)
-        - Get Webshare proxy at: https://www.webshare.io/
+        - Update proxy credentials in the code
+        - Toggle proxy usage if needed
         
         **Supported URL formats:**
         - `youtube.com/watch?v=VIDEO_ID`
@@ -165,14 +156,13 @@ def main():
         """)
         
         # Proxy toggle
-        use_proxy = st.checkbox("Use Proxy (Required to avoid IP bans)", value=True)
+        use_proxy = st.checkbox("Use Proxy", value=True)
         if use_proxy and proxy_available:
-            st.success("✅ Proxy enabled - Safe from IP bans")
+            st.success("✅ Proxy enabled")
         elif use_proxy and not proxy_available:
-            st.error("❌ Proxy configuration failed - You'll get IP banned!")
-            st.warning("⚠️ Update proxy credentials in app.py")
+            st.error("❌ Proxy configuration failed")
         else:
-            st.warning("⚠️ Direct connection - High risk of IP ban")
+            st.warning("⚠️ Using direct connection")
     
     # Main input
     col1, col2 = st.columns([3, 1])
