@@ -9,7 +9,8 @@ try:
     ytt_api = YouTubeTranscriptApi(
         proxy_config=WebshareProxyConfig(
             proxy_username="labvizce",  # Replace with your actual proxy username
-            proxy_password="x2za3x15c9ah",  # Replace with your actual proxy password
+            proxy_password="x2za3x15c9ah",
+            filter_ip_locations=["de", "us"],
         )
     )
     proxy_available = True
