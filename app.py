@@ -16,6 +16,19 @@ def get_youtube_api_instance():
     proxy_username = "labvizce"  # Replace with your actual username
     proxy_password = "x2za3x15c9ah"  # Replace with your actual password
     
+    if PROXY_SUPPORT and proxy_username and proxy_password:
+        try:
+            proxy_config = WebshareProxyConfig(
+                proxy_username=proxy_username,
+                proxy_password=proxy_password
+            )
+            api_instance = YouTubeTranscriptApi(proxy_config=proxy_config)
+            return api_instance
+        except Exception as e:
+            st.warning(f"⚠️ Proxy configuration failed: {str(e)}. Using direct connection.")
+    
+    # Return standard API instance (direct connection)
+    return YouTubeTranscriptApi
 
 
 def extract_transcript_details(youtube_video_url):
