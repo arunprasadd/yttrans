@@ -1,7 +1,7 @@
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api.proxies import WebshareProxyConfig
 from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
+from youtube_transcript_api.proxies import WebshareProxyConfig
 import re
 
 
@@ -13,15 +13,19 @@ def get_youtube_api_instance():
     
     if proxy_username and proxy_password:
         try:
+            # Create proxy config
             proxy_config = WebshareProxyConfig(
                 proxy_username=proxy_username,
-                proxy_password=proxy_password,
+                proxy_password=proxy_password
             )
+            # Return API instance with proxy
             return YouTubeTranscriptApi(proxy_config=proxy_config)
         except Exception as e:
             st.warning(f"⚠️ Proxy configuration failed: {str(e)}. Using direct connection.")
+            # Fallback to direct connection
             return YouTubeTranscriptApi()
     
+    # No proxy - direct connection
     return YouTubeTranscriptApi()
 
 
@@ -44,33 +48,12 @@ def extract_transcript_details(youtube_video_url):
         # Get API instance (with or without proxy)
         api_instance = get_youtube_api_instance()
 
-        # Try multiple approaches to get transcripts
-        transcript_data = None
-        available_transcripts = []
-        
-        # Method 1: Try direct transcript access first (sometimes works when list_transcripts fails)
-        for lang_code in ['en', 'en-US', 'en-GB', 'auto', None]:
-            try:
-                if lang_code is None:
-                    # Try without specifying language
-                    transcript_data = api_instance.get_transcript(video_id)
-                else:
-                    transcript_data = api_instance.get_transcript(video_id, languages=[lang_code])
-                
-                if transcript_data:
-                    return {
-                        'video_id': video_id,
-                        'available_transcripts': [{'language': f'Auto-detected ({lang_code or "default"})', 'language_code': lang_code or 'auto', 'is_generated': True, 'is_translatable': False}],
-                        'transcript_data': transcript_data
-                    }
-            except:
-                continue
-
-        # Get list of available transcripts first
+        # Get list of available transcripts
         try:
-            transcript_list_info = api_instance.list_transcripts(video_id)
+            transcript_list = api_instance.list_transcripts(video_id)
+            available_transcripts = []
 
-            for transcript in transcript_list_info:
+            for transcript in transcript_list:
                 transcript_info = {
                     'language': transcript.language,
                     'language_code': transcript.language_code,
@@ -86,6 +69,19 @@ def extract_transcript_details(youtube_video_url):
             }
 
         except TranscriptsDisabled:
+            # Try direct transcript access as fallback
+            try:
+                # Try to get transcript directly without listing first
+                transcript_data = api_instance.get_transcript(video_id)
+                if transcript_data:
+                    return {
+                        'video_id': video_id,
+                        'available_transcripts': [{'language': 'Auto-detected', 'language_code': 'auto', 'is_generated': True, 'is_translatable': False}],
+                        'transcript_data': transcript_data
+                    }
+            except:
+                pass
+            
             raise Exception("❌ Transcripts appear to be disabled for this video, even though captions may be visible on YouTube. This can happen due to:\n\n• Regional restrictions on transcript access\n• API limitations for certain video types\n• Temporary YouTube API issues\n• Video creator has disabled API access to transcripts\n\nTry:\n• A different video with confirmed captions\n• Refreshing and trying again later\n• Using a VPN if you're in a restricted region\n• Testing with TED Talks or educational videos which typically work")
         except VideoUnavailable:
             raise Exception("❌ Video is unavailable. This could be because the video is private, deleted, age-restricted, or region-blocked. Please check the video URL and try again.")
@@ -106,14 +102,14 @@ def get_transcript_by_language(video_id, language_code):
         
         # Handle special case for auto-detected transcripts
         if language_code == 'auto':
-            transcript_list = api_instance.get_transcript(video_id)
+            transcript_data = api_instance.get_transcript(video_id)
         else:
-            transcript_list = api_instance.get_transcript(video_id, languages=[language_code])
+            transcript_data = api_instance.get_transcript(video_id, languages=[language_code])
 
         formatted_transcript = ""
         full_text = ""
 
-        for entry in transcript_list:
+        for entry in transcript_data:
             timestamp = format_timestamp(entry['start'])
             text = entry['text']
             formatted_transcript += f"[{timestamp}] {text}\n"
@@ -123,7 +119,7 @@ def get_transcript_by_language(video_id, language_code):
             'video_id': video_id,
             'formatted_transcript': formatted_transcript,
             'full_text': full_text.strip(),
-            'duration': transcript_list[-1]['start'] + transcript_list[-1]['duration'] if transcript_list else 0,
+            'duration': transcript_data[-1]['start'] + transcript_data[-1]['duration'] if transcript_data else 0,
             'language_code': language_code
         }
 
