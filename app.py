@@ -5,10 +5,18 @@ from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable
 import re
 
 # Proxy configuration - the correct way according to official docs
-proxy_config = WebshareProxyConfig(
-    proxy_username="labvizce",  # Replace with your actual proxy username
-    proxy_password="x2za3x15c9ah",  # Replace with your actual proxy password
-)
+try:
+    ytt_api = YouTubeTranscriptApi(
+        proxy_config=WebshareProxyConfig(
+            proxy_username="labvizce",  # Replace with your actual proxy username
+            proxy_password="x2za3x15c9ah",  # Replace with your actual proxy password
+        )
+    )
+    proxy_available = True
+except Exception as e:
+    # Fallback to default API without proxy
+    ytt_api = YouTubeTranscriptApi()
+    proxy_available = False
 
 def extract_video_id(youtube_video_url):
     """Extract video ID from different YouTube URL formats"""
@@ -30,10 +38,11 @@ def extract_video_id(youtube_video_url):
 def get_available_transcripts(video_id, use_proxy=True):
     """Get list of available transcripts for a video"""
     try:
-        # Use proxy_config parameter in the list() method directly
-        if use_proxy:
-            transcript_list = YouTubeTranscriptApi.list(video_id, proxies=proxy_config)
+        # Use the initialized API instance
+        if use_proxy and proxy_available:
+            transcript_list = ytt_api.list(video_id)
         else:
+            # Use default API without proxy
             transcript_list = YouTubeTranscriptApi.list(video_id)
             
         available_transcripts = []
@@ -65,14 +74,14 @@ def get_available_transcripts(video_id, use_proxy=True):
 def get_transcript_data(video_id, language_code, use_proxy=True):
     """Get transcript data using video_id and language_code directly"""
     try:
-        # Use the static method get() with proxy configuration
-        if use_proxy:
-            transcript_data = YouTubeTranscriptApi.get_transcript(
+        # Use the initialized API instance
+        if use_proxy and proxy_available:
+            transcript_data = ytt_api.get_transcript(
                 video_id, 
-                languages=[language_code],
-                proxies=proxy_config
+                languages=[language_code]
             )
         else:
+            # Use default API without proxy
             transcript_data = YouTubeTranscriptApi.get_transcript(
                 video_id, 
                 languages=[language_code]
@@ -148,8 +157,10 @@ def main():
         
         # Proxy toggle
         use_proxy = st.checkbox("Use Proxy", value=True)
-        if use_proxy:
+        if use_proxy and proxy_available:
             st.success("✅ Proxy enabled")
+        elif use_proxy and not proxy_available:
+            st.error("❌ Proxy configuration failed")
         else:
             st.warning("⚠️ Using direct connection")
     
