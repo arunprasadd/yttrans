@@ -35,9 +35,15 @@ print_error() {
 # Check if running as root
 check_root() {
     if [[ $EUID -eq 0 ]]; then
-        print_error "This script should not be run as root for security reasons."
-        print_warning "Please run as a regular user with sudo privileges."
-        exit 1
+        print_warning "Running as root. This is not recommended for security reasons."
+        print_warning "Consider creating a regular user with sudo privileges."
+        read -p "Do you want to continue as root anyway? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_error "Setup cancelled. Please create a regular user or run with sudo."
+            exit 1
+        fi
+        print_warning "Continuing as root..."
     fi
 }
 
