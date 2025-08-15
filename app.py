@@ -88,10 +88,41 @@ def get_transcript(video_id: str):
 # --- Format transcript for display ---
 def format_transcript(transcript, include_timestamps=True):
     """Format transcript for display"""
+    # Convert transcript snippets to dictionaries if needed
+    transcript_data = []
+    for item in transcript:
+        if hasattr(item, 'text') and hasattr(item, 'start'):
+            # It's a FetchedTranscriptSnippet object
+            transcript_data.append({
+                'text': item.text,
+                'start': item.start,
+                'duration': getattr(item, 'duration', 0)
+            })
+        else:
+            # It's already a dictionary
+            transcript_data.append(item)
+    
     if include_timestamps:
-        return "\n".join([f"[{int(t['start']//60):02d}:{int(t['start']%60):02d}] {t['text']}" for t in transcript])
+        return "\n".join([f"[{int(t['start']//60):02d}:{int(t['start']%60):02d}] {t['text']}" for t in transcript_data])
     else:
-        return " ".join([t['text'] for t in transcript])
+        return " ".join([t['text'] for t in transcript_data])
+
+# --- Convert transcript to dictionary format ---
+def convert_transcript_to_dict(transcript):
+    """Convert transcript snippets to dictionary format for easier handling"""
+    transcript_data = []
+    for item in transcript:
+        if hasattr(item, 'text') and hasattr(item, 'start'):
+            # It's a FetchedTranscriptSnippet object
+            transcript_data.append({
+                'text': item.text,
+                'start': item.start,
+                'duration': getattr(item, 'duration', 0)
+            })
+        else:
+            # It's already a dictionary
+            transcript_data.append(item)
+    return transcript_data
 
 # --- Get video info ---
 def get_video_info(video_id: str):
@@ -194,8 +225,10 @@ if st.button("🎬 Extract Transcript", type="primary"):
                 with col1:
                     show_timestamps = st.checkbox("Show timestamps", value=True)
                 with col2:
-                    word_count = sum(len(t['text'].split()) for t in transcript)
-                    duration = max(t['start'] + t.get('duration', 0) for t in transcript)
+                    # Convert transcript to dictionary format for processing
+                    transcript_dict = convert_transcript_to_dict(transcript)
+                    word_count = sum(len(t['text'].split()) for t in transcript_dict)
+                    duration = max(t['start'] + t.get('duration', 0) for t in transcript_dict)
                     st.info(f"📊 {word_count} words • {int(duration//60)}:{int(duration%60):02d} duration")
                 
                 # Format and display transcript
@@ -232,7 +265,7 @@ if st.button("🎬 Extract Transcript", type="primary"):
                 with col3:
                     # JSON format for developers
                     import json
-                    json_data = json.dumps(transcript, indent=2)
+                    json_data = json.dumps(transcript_dict, indent=2)
                     st.download_button(
                         "🔧 Download as JSON",
                         data=json_data,
