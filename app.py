@@ -157,6 +157,80 @@ def convert_transcript_to_dict(transcript):
             transcript_data.append(item)
     return transcript_data
 
+# --- Summary generation functions ---
+def calculate_sentence_scores(sentences, word_freq):
+    """Calculate scores for sentences based on word frequency"""
+    sentence_scores = {}
+    
+    for sentence in sentences:
+        words = word_tokenize(sentence.lower())
+        words = [word for word in words if word.isalnum()]
+        
+        score = 0
+        word_count = 0
+        
+        for word in words:
+            if word in word_freq:
+                score += word_freq[word]
+                word_count += 1
+        
+        if word_count > 0:
+            sentence_scores[sentence] = score / word_count
+        else:
+            sentence_scores[sentence] = 0
+    
+    return sentence_scores
+
+def get_word_frequency(text):
+    """Get word frequency excluding stopwords"""
+    try:
+        stop_words = set(stopwords.words('english'))
+    except:
+        stop_words = set()
+    
+    words = word_tokenize(text.lower())
+    words = [word for word in words if word.isalnum() and word not in stop_words and len(word) > 2]
+    
+    word_freq = Counter(words)
+    
+    # Normalize frequencies
+# --- Summary generation functions ---
+def calculate_sentence_scores(sentences, word_freq):
+    """Calculate scores for sentences based on word frequency"""
+    sentence_scores = {}
+    
+    for sentence in sentences:
+        words = word_tokenize(sentence.lower())
+        words = [word for word in words if word.isalnum()]
+        
+        score = 0
+        word_count = 0
+        
+        for word in words:
+            if word in word_freq:
+                score += word_freq[word]
+                word_count += 1
+        
+        if word_count > 0:
+            sentence_scores[sentence] = score / word_count
+        else:
+            sentence_scores[sentence] = 0
+    
+    return sentence_scores
+
+def get_word_frequency(text):
+    """Get word frequency excluding stopwords"""
+    try:
+        stop_words = set(stopwords.words('english'))
+    except:
+        stop_words = set()
+    
+    words = word_tokenize(text.lower())
+    words = [word for word in words if word.isalnum() and word not in stop_words and len(word) > 2]
+    
+    word_freq = Counter(words)
+    
+    # Normalize frequencies
 # --- GPT-4 Summary generation ---
 def generate_gpt4_summary(text, summary_type="comprehensive", max_length=400):
     """Generate summary using GPT-4"""
@@ -212,6 +286,7 @@ Executive Summary:"""
         return summary, None
         
     except Exception as e:
+        print(f"DEBUG: OpenAI API error: {e}")
         return None, f"Error generating summary: {str(e)}"
 
 def generate_multiple_summaries(text):
