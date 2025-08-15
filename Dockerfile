@@ -23,8 +23,8 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 
 # --- Proxy configuration ---
-PROXY_USERNAME = "labvizce-staticresidential"  # Replace
-PROXY_PASSWORD = "x2za3x15c9ah"  # Replace
+PROXY_USERNAME = "labvizce-staticresidential\"  # Replace
+PROXY_PASSWORD = "x2za3x15c9ah\"  # Replace
 
 try:
     ytt_api = YouTubeTranscriptApi(
@@ -121,7 +121,7 @@ def format_transcript(transcript, include_timestamps=True):
             transcript_data.append(item)
     
     if include_timestamps:
-        return "\n".join([f"[{int(t['start']//60):02d}:{int(t['start']%60):02d}] {t['text']}" for t in transcript_data])
+        return "\n".join([f"[{int(t['start']//60):02d}:{int(t['start']%60):02d}] {t['text']}\" for t in transcript_data])
     else:
         return " ".join([t['text'] for t in transcript_data])
 
