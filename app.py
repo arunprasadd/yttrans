@@ -268,6 +268,239 @@ def get_word_frequency(text):
     word_freq = Counter(words)
     
     # Normalize frequencies
+# --- Summary generation functions ---
+def calculate_sentence_scores(sentences, word_freq):
+    """Calculate scores for sentences based on word frequency"""
+    sentence_scores = {}
+    
+    for sentence in sentences:
+        words = word_tokenize(sentence.lower())
+        words = [word for word in words if word.isalnum()]
+        
+        score = 0
+        word_count = 0
+        
+        for word in words:
+            if word in word_freq:
+                score += word_freq[word]
+                word_count += 1
+        
+        if word_count > 0:
+            sentence_scores[sentence] = score / word_count
+        else:
+            sentence_scores[sentence] = 0
+    
+    return sentence_scores
+
+def get_word_frequency(text):
+    """Get word frequency excluding stopwords"""
+    try:
+        stop_words = set(stopwords.words('english'))
+    except:
+        stop_words = set()
+    
+    words = word_tokenize(text.lower())
+    words = [word for word in words if word.isalnum() and word not in stop_words and len(word) > 2]
+    
+    word_freq = Counter(words)
+    
+    # Normalize frequencies
+Focus on the main conclusions, recommendations, and actionable insights.
+Keep it concise and professional, around {max_length//2} words.
+
+Transcript:
+{text}
+
+Executive Summary:"""
+        }
+        
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that creates clear, accurate summaries of video content."},
+                {"role": "user", "content": prompts.get(summary_type, prompts["comprehensive"])}
+            ],
+            max_tokens=max_length * 2,  # Rough token estimate
+            temperature=0.3
+        )
+        
+        summary = response.choices[0].message.content.strip()
+        return summary, None
+        
+    except Exception as e:
+        return None, f"Error generating summary: {str(e)}"
+
+def generate_multiple_summaries(text):
+    """Generate multiple types of summaries"""
+    summaries = {}
+    
+    # Comprehensive summary
+    comp_summary, comp_error = generate_gpt4_summary(text, "comprehensive", 400)
+    if comp_summary:
+        summaries["comprehensive"] = comp_summary
+    
+    # Bullet points
+    bullet_summary, bullet_error = generate_gpt4_summary(text, "bullet_points", 300)
+    if bullet_summary:
+        summaries["bullet_points"] = bullet_summary
+    
+    # Executive summary
+    exec_summary, exec_error = generate_gpt4_summary(text, "executive", 200)
+    if exec_summary:
+        summaries["executive"] = exec_summary
+    
+    # Return summaries and any errors
+    errors = [e for e in [comp_error, bullet_error, exec_error] if e]
+    return summaries, errors[0] if errors else None
+
+# --- Summary generation functions ---
+def calculate_sentence_scores(sentences, word_freq):
+    """Calculate scores for sentences based on word frequency"""
+    sentence_scores = {}
+    
+    for sentence in sentences:
+        words = word_tokenize(sentence.lower())
+        words = [word for word in words if word.isalnum()]
+        
+        score = 0
+        word_count = 0
+        
+        for word in words:
+            if word in word_freq:
+                score += word_freq[word]
+                word_count += 1
+        
+        if word_count > 0:
+            sentence_scores[sentence] = score / word_count
+        else:
+            sentence_scores[sentence] = 0
+    
+    return sentence_scores
+
+def get_word_frequency(text):
+    """Get word frequency excluding stopwords"""
+    try:
+        stop_words = set(stopwords.words('english'))
+    except:
+        stop_words = set()
+    
+    words = word_tokenize(text.lower())
+    words = [word for word in words if word.isalnum() and word not in stop_words and len(word) > 2]
+    
+    word_freq = Counter(words)
+    
+    # Normalize frequencies
+# --- Summary generation functions ---
+def calculate_sentence_scores(sentences, word_freq):
+    """Calculate scores for sentences based on word frequency"""
+    sentence_scores = {}
+    
+    for sentence in sentences:
+        words = word_tokenize(sentence.lower())
+        words = [word for word in words if word.isalnum()]
+        
+        score = 0
+        word_count = 0
+        
+        for word in words:
+            if word in word_freq:
+                score += word_freq[word]
+                word_count += 1
+        
+        if word_count > 0:
+            sentence_scores[sentence] = score / word_count
+        else:
+            sentence_scores[sentence] = 0
+    
+    return sentence_scores
+
+def get_word_frequency(text):
+    """Get word frequency excluding stopwords"""
+    try:
+        stop_words = set(stopwords.words('english'))
+    except:
+        stop_words = set()
+    
+    words = word_tokenize(text.lower())
+    words = [word for word in words if word.isalnum() and word not in stop_words and len(word) > 2]
+    
+    word_freq = Counter(words)
+    
+    # Normalize frequencies
+# --- Summary generation functions ---
+def calculate_sentence_scores(sentences, word_freq):
+    """Calculate scores for sentences based on word frequency"""
+    sentence_scores = {}
+    
+    for sentence in sentences:
+        words = word_tokenize(sentence.lower())
+        words = [word for word in words if word.isalnum()]
+        
+        score = 0
+        word_count = 0
+        
+        for word in words:
+            if word in word_freq:
+                score += word_freq[word]
+                word_count += 1
+        
+        if word_count > 0:
+            sentence_scores[sentence] = score / word_count
+        else:
+            sentence_scores[sentence] = 0
+    
+    return sentence_scores
+
+def get_word_frequency(text):
+    """Get word frequency excluding stopwords"""
+    try:
+        stop_words = set(stopwords.words('english'))
+    except:
+        stop_words = set()
+    
+    words = word_tokenize(text.lower())
+    words = [word for word in words if word.isalnum() and word not in stop_words and len(word) > 2]
+    
+    word_freq = Counter(words)
+    
+    # Normalize frequencies
+# --- Summary generation functions ---
+def calculate_sentence_scores(sentences, word_freq):
+    """Calculate scores for sentences based on word frequency"""
+    sentence_scores = {}
+    
+    for sentence in sentences:
+        words = word_tokenize(sentence.lower())
+        words = [word for word in words if word.isalnum()]
+        
+        score = 0
+        word_count = 0
+        
+        for word in words:
+            if word in word_freq:
+                score += word_freq[word]
+                word_count += 1
+        
+        if word_count > 0:
+            sentence_scores[sentence] = score / word_count
+        else:
+            sentence_scores[sentence] = 0
+    
+    return sentence_scores
+
+def get_word_frequency(text):
+    """Get word frequency excluding stopwords"""
+    try:
+        stop_words = set(stopwords.words('english'))
+    except:
+        stop_words = set()
+    
+    words = word_tokenize(text.lower())
+    words = [word for word in words if word.isalnum() and word not in stop_words and len(word) > 2]
+    
+    word_freq = Counter(words)
+    
+    # Normalize frequencies
 # --- GPT-4 Summary generation ---
 def generate_gpt4_summary(text, summary_type="comprehensive", max_length=400):
     """Generate summary using GPT-4"""
@@ -498,6 +731,55 @@ if st.button("🎬 Extract Transcript", type="primary"):
                             tabs = st.tabs(["📋 Comprehensive", "🔸 Key Points", "📊 Executive"])
                             
                             if "comprehensive" in summaries:
+                                with tabs[0]:
+                                    st.markdown("**Comprehensive Summary:**")
+                                    st.write(summaries["comprehensive"])
+                            
+                            if "bullet_points" in summaries:
+                                with tabs[1]:
+                                    st.markdown("**Key Points:**")
+                                    st.write(summaries["bullet_points"])
+                            
+                            if "executive" in summaries:
+                                with tabs[2]:
+                                    st.markdown("**Executive Summary:**")
+                                    st.write(summaries["executive"])
+                        else:
+                            # Single summary
+                            summary_key = list(summaries.keys())[0]
+                            st.write(summaries[summary_key])
+                        
+                        # Download summary options
+                        st.markdown("#### 💾 Download Summaries")
+                        col1, col2, col3 = st.columns(3)
+                        
+                        if "comprehensive" in summaries:
+                            with col1:
+                                st.download_button(
+                                    "📋 Comprehensive Summary",
+                                    data=summaries["comprehensive"],
+                                    file_name=f"summary_comprehensive_{video_id}.txt",
+                                    mime="text/plain"
+                                )
+                        
+                        if "bullet_points" in summaries:
+                            with col2:
+                                st.download_button(
+                                    "🔸 Key Points",
+                                    data=summaries["bullet_points"],
+                                    file_name=f"summary_keypoints_{video_id}.txt",
+                                    mime="text/plain"
+                                )
+                        
+                        if "executive" in summaries:
+                            with col3:
+                                st.download_button(
+                                    "📊 Executive Summary",
+                                    data=summaries["executive"],
+                                    file_name=f"summary_executive_{video_id}.txt",
+                                    mime="text/plain"
+                                )
+                
                                 with tabs[0]:
                                     st.markdown("**Comprehensive Summary:**")
                                     st.write(summaries["comprehensive"])
